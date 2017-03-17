@@ -1,0 +1,94 @@
+---
+title: "SOFT-IMPUTE"
+author: "Qinglong Tian"
+date: "March 16, 2017"
+output: pdf_document
+---
+Read in the data:
+```{r}
+Lenadata1 <- scan(file = "T:/ds/qltian/Soft-Impute-MovieLens/Data/lena256")
+tempLena <- matrix(Lenadata1[-c(1,2)], nrow = 256)
+Lena <- tempLena
+for(i in 1:256){
+  Lena[,i] <- tempLena[,257-i]
+}
+image(Lena,col = grey.colors(100,start = 0, end = 1))
+```
+2.(a) SOFT-IMPUTE Function - Internal svd Function
+```{r}
+softImpute.inter <- function(mtx, lamda){
+  z <- matrix(0, nrow = dim(mtx)[1],ncol = dim(mtx)[2])
+  posi <- (mtx != 0)
+  error <- 1
+  maxerror <- 0.0001
+  maxiter <- 100000
+  i = 0
+  while(error > maxerror){
+    zz <- z
+    zz[posi] <- 0
+    svdOut <- svd(mtx + zz)
+    D <- svdOut$d
+    dLamda <- diag(ifelse((D-lamda) >0, D-lamda, 0))
+    znew <- svdOut$u %*% dLamda %*% t(svdOut$v)
+    znew[posi] <- mtx[posi]
+    error <- sum((znew - z)^2)/sum(z^2)
+    z <- znew
+    i=i+1
+    if(i > maxiter){
+      return(-1)
+      break
+    }
+  }
+  return(znew)
+}
+```
+Test the algorithm
+```{r}
+Lena.s <- Lena
+Lena.s[sample(length(Lena),size = 0.3*length(Lena))] <- 0
+xx <- softImpute.inter(Lena.s,500)
+```
+```{r}
+image(xx,col = grey.colors(100,start = 0, end = 1))
+```
+
+2.(b) SOFT-IMPUTE Function - svd Package
+```{r}
+softImpute.svd.propack <- function(mtx, lamda){
+  z <- matrix(0, nrow = dim(mtx)[1],ncol = dim(mtx)[2])
+  posi <- (mtx != 0)
+  error <- 1
+  maxerror <- 0.0001
+  maxiter <- 100000
+  i = 0
+  library(svd)
+  while(error > maxerror){
+    zz <- z
+    zz[posi] <- 0
+    svdOut <- propack.svd(mtx + zz)
+    D <- svdOut$d
+    dLamda <- diag(ifelse((D-lamda) >0, D-lamda, 0))
+    znew <- svdOut$u %*% dLamda %*% t(svdOut$v)
+    znew[posi] <- mtx[posi]
+    error <- sum((znew - z)^2)/sum(z^2)
+    z <- znew
+    i=i+1
+    if(i > maxiter){
+      return(-1)
+      break
+    }
+  }
+  return(znew)
+}
+```
+
+Test the algorithm
+```{r}
+Lena.s <- Lena
+Lena.s[sample(length(Lena),size = 0.4*length(Lena))] <- 0
+xx <- softImpute.svd.propack(Lena.s,400)
+```
+```{r}
+image(xx,col = grey.colors(100,start = 0, end = 1))
+```
+2. Simulation
