@@ -1,3 +1,6 @@
+//The format of the data is like the given Lena dataset. 
+//The first row is the dimension of the matrix, N is the row, P is the column
+//And N >= P. And the data written in the file is arranged by column.
 #include <stdio.h>
 #include <stdlib.h>
 #include <math.h>
@@ -118,7 +121,7 @@ int main(int argc, char *argv[]){
 		}
 	}
 	
-	//printf("%d\n",i);
+	//printf("%d\n",i); //Number of the interations.
 	
 	/*
 	for(i=0;i<N;i++)
