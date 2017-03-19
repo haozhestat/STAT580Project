@@ -30,7 +30,7 @@ softImpute.inter <- function(mtx, lamda){
     D <- svdOut$d
     dLamda <- diag(ifelse((D-lamda) >0, D-lamda, 0))
     znew <- svdOut$u %*% dLamda %*% t(svdOut$v)
-    znew[posi] <- mtx[posi]
+    #znew[posi] <- mtx[posi]
     error <- sum((znew - z)^2)/sum(z^2)
     z <- znew
     i=i+1
@@ -45,7 +45,7 @@ softImpute.inter <- function(mtx, lamda){
 Test the algorithm
 ```{r}
 Lena.s <- Lena
-Lena.s[sample(length(Lena),size = 0.3*length(Lena))] <- 0
+Lena.s[sample(length(Lena),size = 0.7*length(Lena))] <- 0
 xx <- softImpute.inter(Lena.s,500)
 ```
 ```{r}
@@ -69,7 +69,7 @@ softImpute.svd.propack <- function(mtx, lamda){
     D <- svdOut$d
     dLamda <- diag(ifelse((D-lamda) >0, D-lamda, 0))
     znew <- svdOut$u %*% dLamda %*% t(svdOut$v)
-    znew[posi] <- mtx[posi]
+    #znew[posi] <- mtx[posi]
     error <- sum((znew - z)^2)/sum(z^2)
     z <- znew
     i=i+1
