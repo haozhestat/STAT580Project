@@ -10,6 +10,7 @@
 
 void dgesvd_(char *JOBU, char *JOBVT, int *M, int *n, double *A, int *LDA, double *S, double *U, int *LDU, double *VT, int *LDVT, double *WORK, int *LWORK, int *INFO);
 
+// The first argument is the filename, and the second argument is the value of lamda
 int main(int argc, char *argv[]){
 	int N,P,i,j,k,t;
 	char *filename = argv[1];
