@@ -14,3 +14,4 @@ write.table(RandMat_FixRank(100,50,10), file = "~/Documents/Soft-Impute-MovieLen
             row.names = FALSE, col.names = FALSE)
 write.table(MissingIndex(100,50,0.1,FALSE), file = "~/Documents/Soft-Impute-MovieLens/Codes/MIndex_test.txt",
             row.names = FALSE, col.names = FALSE)
+
