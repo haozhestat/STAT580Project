@@ -1,0 +1,85 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <math.h>
+
+#define EPSILON 0.001
+
+void dgesvd_(char *jobu, char *jobvt, int *m, int *n, double *a, int *lda, double *s, double *u,
+    int *ldu, double *vt, int *ldvt, double *work, int *lwork, int *info);
+void dgemm_(char *transa, char *transb, int *m, int *n, int *k, double *alpha, double *a, int *lda,
+	double *b, int *ldb, double *beta, double *c, double *ldc)
+
+int main(int argc, char *argv[]){
+	char *filename;
+	/*The first argument is the file, the second is the value of lambda*/
+	filename = argv[1];
+	File *f=fopen(filename,"r");
+	double lambda=atof(argv[2]);
+	int N, P, i=0, j;
+	
+	fscanf("%d ", &N);
+	fscanf("%d\n", &P);
+
+	double X[N*P],Z_old[N*P]={},data[N*P];
+	/*read in the data*/
+	while(!feof(f)){
+		fscanf(f,"%lf*[^lf]",&data[i]);
+		i++;
+	}
+	/*Input the data to X*/
+	for(j=0;j<P;j++){
+		for(i=0;i<N;i++){
+			X[j*N+i] = data[i*P+j];
+		}
+	}
+
+	double Z_comp[N*P]={},ratio,Z_new[N*P],Z_temp[N*P], Z_new[N*P]={}; 
+	double norm_new=0, norm_old=0;
+	char jobu='A', jobvt='A', transa='N',transb='N';
+	double S[P], work[5*P], U[N*P], VT[P*P], UD[N*P];
+	double alpha=1.0, beta=0.0 ;
+	int lwork=5*P, info;
+	while(1){
+	    /*compute the complementary projection of Z_old*/
+		for(i=0;i<N;i++){
+			if(X[i]==0){Z_comp[i]=Z_old[i];}
+		}
+	    /*Add X and Z_comp up*/
+	    for(i=0;i<N*P;i++){
+	    	Z_temp[i]=X[i]+Z_comp[i];
+	    }
+	    dgesvd_(&jobu, &jobvt, &N, &P, Z_temp, &N, S, U, &N, VT, &P, work, &lwork, &info);
+	    /*compute Dlambda, where D is the singular value*/
+	    for(i=0;i<P;i++){
+	    	if(S[i]-lambda>0){S[i]=S[i]-lambda;}
+	    	else {S[i]=0;}
+	    }
+	    /*Compute Z_new*/
+	    for(j=0;j<P;j++){
+	    	for(i=0;i<N;i++){
+	    		UD[N*j+i]=U[N*j+i]*S[j];
+	    	}
+	    }
+	    dgemm_(&transa, &transb, &N, &P, &P, &alpha, UD, &N, VT, &P, &beta, Z_new, &N);
+	    /*The returned matrix is Z_new*/
+	    /*Calculate the ratio*/
+	    for(i=0;i<N*P;i++){
+	    	norm_new = norm_new + pow(Z_new[i]-Z_old[i],2);
+	    	norm_old = norm_old + pow(Z_old[i],2);
+	    }
+	    ratio = norm_new/norm_old;
+	    if(ratio < EPSILON) break; /*The condition of exiting the loop*/
+	    /*Assign Z_new to Z_old*/
+	    for(i=0;i<N*P;i++){
+	    	Z_old[i] = Z_new[i];
+	    }
+    }
+    /*Print out the final result*/
+	for(i=0;i<N;i++){
+		for(j=0;j<P;j++){
+			printf("%lf ", Z_new[j*N+i]);
+		}
+		printf("\n");
+	}
+	return 0;
+}
