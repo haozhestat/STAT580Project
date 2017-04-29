@@ -1,0 +1,150 @@
+---
+title: "Soft-impute"
+output: pdf_document
+---
+
+(a) R internal svd funciton
+
+```{r}
+SoftImpute_svd <- function(x,lambda,epsilon=0.00001,maxiter=1000){
+  z_old <- matrix(0, nrow = dim(x)[1], ncol=dim(x)[2])
+  i <- 0
+  while(1){
+    svd1 <- svd(x+(x==0)*z_old)
+    D_lambda <- diag((svd1$d-lambda>0)*(svd1$d-lambda))
+    z_new <- svd1$u %*% D_lambda %*% t(svd1$v)
+    if(sum((z_new-z_old)^2)/sum(z_old^2)<epsilon){
+      break
+    }
+    if(i>maxiter){
+      break
+    }
+    z_old <- z_new
+    i <- i+1
+  }
+  return(z_new)
+}
+```
+
+
+(b) svd package
+
+
+```{r}
+library("svd")
+SoftImpute_svdpack <- function(x,lambda,epsilon=0.00001,maxiter=1000){
+  z_old <- matrix(0, nrow = dim(x)[1], ncol=dim(x)[2])
+  i <- 0
+  while(1){
+    svd1 <- propack.svd(x+(x==0)*z_old)
+    D_lambda <- diag((svd1$d-lambda>0)*(svd1$d-lambda))
+    z_new <- svd1$u %*% D_lambda %*% t(svd1$v)
+    if(sum((z_new-z_old)^2)/sum(z_old^2)<epsilon){
+      break
+    }
+    if(i>maxiter){
+      break
+    }
+    z_old <- z_new
+    i <- i+1
+  }
+  return(z_new)
+}
+```
+
+
+(c) RcppArmadillo
+
+```{r}
+library(inline)
+library(RcppArmadillo)
+arma_body <- 'using namespace arma; NumericMatrix Xr(Xs); 
+mat X = Rcpp::as<mat>(Xr), U, V; 
+vec s; svd(U, s, V, X);
+return Rcpp::List::create(Rcpp::Named("u")=U,Rcpp::Named("d")=s,Rcpp::Named("v")=V);'
+arma_svd <- cxxfunction(signature(Xs = "numeric"), body = arma_body, plugin = "RcppArmadillo")
+
+SoftImpute_Rcpp <- function(x,lambda,epsilon=0.00001,maxiter=1000){
+  z_old <- matrix(0, nrow = dim(x)[1], ncol=dim(x)[2])
+  i <- 0
+  while(1){
+    svd1 <- arma_svd(x+(x==0)*z_old)
+    D_lambda <- diag(as.vector((svd1$d-lambda>0)*(svd1$d-lambda)))
+    z_new <- svd1$u %*% D_lambda %*% t(svd1$v)
+    if(sum((z_new-z_old)^2)/sum(z_old^2)<epsilon){
+      break
+    }
+    if(i>maxiter){
+      break
+    }
+    z_old <- z_new
+    i <- i+1
+  }
+  return(z_new)
+}
+```
+
+
+
+(d) irlba package
+
+```{r}
+library("irlba")
+library("Matrix")
+SoftImpute_irlba <- function(x,lambda,epsilon=0.00001,maxiter=1000){
+  z_old <- matrix(0, nrow = dim(x)[1], ncol=dim(x)[2])
+  i <- 0
+  n <- trunc(min(dim(x))/2-1)
+  D_lambda <- 0
+  while(1){
+    if(i==0){
+      svd1 <- irlba(x+(x==0)*z_old,n)
+    } else{
+      D <- diag(D_lambda)
+      m <- length(D[D>0])
+      svd1 <- irlba(x+(x==0)*z_old,min(n,m))
+    }
+    D_lambda <- diag((svd1$d-lambda>0)*(svd1$d-lambda))
+    z_new <- svd1$u %*% D_lambda %*% t(svd1$v)
+    if(sum((z_new-z_old)^2)/sum(z_old^2)<epsilon){
+      break
+    }
+    if(i>maxiter){
+      break
+    }
+    z_old <- z_new
+    i <- i+1
+  }
+  return(z_new)
+}
+```
+
+
+
+```{r}
+SoftImpute_irlba <- function(x,lambda,epsilon=0.00001,maxiter=1000){
+  z_old <- matrix(0, nrow = dim(x)[1], ncol=dim(x)[2])
+  i <- 0
+  while(1){
+      svd1 <- irlba(x+(x==0)*z_old,50)
+    D_lambda <- diag((svd1$d-lambda>0)*(svd1$d-lambda))
+    z_new <- svd1$u %*% D_lambda %*% t(svd1$v)
+    if(sum((z_new-z_old)^2)/sum(z_old^2)<epsilon){
+      break
+    }
+    if(i>maxiter){
+      break
+    }
+    z_old <- z_new
+    i <- i+1
+  }
+  return(z_new)
+}
+```
+
+
+
+
+
+
+
