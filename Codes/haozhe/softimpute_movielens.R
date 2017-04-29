@@ -1,26 +1,86 @@
 rm(list = ls())
-library(svd)
 
-setwd("~/Documents/Soft-Impute-MovieLens/Data/ml-100k/")
-source("~/Documents/Soft-Impute-MovieLens/Codes/Haozhe/softimpute_rpacksvd.R")
+library(dplyr)
+library(foreach)
+library(doParallel)
 
-train_mat <- read.table("movie_train.txt", header=FALSE)
-validation_mat <- read.table("movie_validation.txt", header = FALSE)
-test_mat <- read.table("movie_test.txt", header=FALSE)
+setwd("~/Documents/Soft-Impute-MovieLens/")
+source("Codes/haozhe/softimpute_rpacksvd.R")
+#source("softimpute_rpacksvd.R")
 
-train_mat <- as.matrix(train_mat)
-validation_mat <- as.matrix(validation_mat)
-test_mat <- as.matrix(test_mat)
+mat_train <- read.table("Data/ml-100k/movie_train.txt")
+mat_validation <- read.table("Data/ml-100k/movie_validation.txt")
+mat_test <- read.table("Data/ml-100k/movie_test.txt")
 
-thres_ratio <- 0.01
-tmp_mat <- train_mat
-tmp_mat[is.na(tmp_mat)] <- 0
-eigen_sample <- svd(tmp_mat)$d
-lambda_prob <- seq(0.82,0.83,0.001)
-sapply(quantile(eigen_sample, lambda_prob),
-       function(lambda){
-         Z <- softimpute_rpacksvd(train_mat,lambda,thres_ratio)
-         return(sqrt(mean((Z[!is.na(validation_mat)] - validation_mat[!is.na(validation_mat)])^2)))
-       })
-Z <- softimpute_rpacksvd(train_mat,quantile(eigen_sample,0.82),thres_ratio)
-sqrt(mean((Z[!is.na(test_mat)] - test_mat[!is.na(test_mat)])^2))
+mat_train <- as.matrix(mat_train)
+mat_validation <- as.matrix(mat_validation)
+mat_test <- as.matrix(mat_test)
+
+# mat_train <- read.table("movie_train.txt")
+# mat_validation <- read.table("movie_validation.txt")
+# mat_test <- read.table("movie_test.txt")
+
+tmp_train <- mat_train
+tmp_train[is.na(tmp_train)] <- 0
+tmp_svd <- svd(tmp_train)$d
+
+cl <- makeCluster(2)
+registerDoParallel(cl)
+
+lambda_grid_1 <- quantile(tmp_svd, seq(0.05,0.95,0.05))
+sim_result_1 <- sapply(lambda_grid_1, 
+                       function(lambda) {
+                         softimpute_rpacksvd(mat_train, lambda, 0.01, mat_validation)})
+
+
+print(sim_result_1)
+
+lambda_grid_2 <- seq(lambda_grid_1[which.min(sim_result_1[1,])] - 5, 
+                     lambda_grid_1[which.min(sim_result_1[1,])] + 5, 1)
+sim_result_2 <- sapply(lambda_grid_2, 
+                       function(lambda) {
+                         softimpute_rpacksvd(mat_train, lambda, 0.01, mat_validation)})
+print(sim_result_2)
+
+lambda_grid_3 <- seq(lambda_grid_2[which.min(sim_result_2[1,])] - 1, 
+                     lambda_grid_2[which.min(sim_result_2[1,])] + 1, 0.1)
+sim_result_3 <- sapply(lambda_grid_3, 
+                       function(lambda) {
+                         softimpute_rpacksvd(mat_train, lambda, 0.01, mat_validation)})
+
+print(sim_result_3)
+
+lambda_grid_4 <- seq(lambda_grid_3[which.min(sim_result_3[1,])] - 0.1, 
+                     lambda_grid_3[which.min(sim_result_3[1,])] + 0.1, 0.01)
+sim_result_4 <- sapply(lambda_grid_4, 
+                       function(lambda) {
+                         softimpute_rpacksvd(mat_train, lambda, 0.01, mat_validation)})
+
+print(sim_result_4)
+
+stopCluster(cl)
+
+write.csv(t(cbind(sim_result_1,sim_result_2, sim_result_3, sim_result_4)),
+          file="sim_result_rpacksvd_001.csv", row.names = FALSE)
+
+softimpute_rpacksvd(mat_train, lambda_grid_4[which.max(sim_result_4[1,])],
+                    10^(-3), mat_test)
+
+result <- rbind(
+  data.frame(lambda = lambda_grid_1, RMSE_validation = sim_result_1[1,],
+             Time = sim_result_1[2,], Step = "Step 1"),
+  data.frame(lambda = lambda_grid_2, RMSE_validation = sim_result_2[1,],
+             Time = sim_result_2[2,], Step = "Step 2"),
+  data.frame(lambda = lambda_grid_3, RMSE_validation = sim_result_3[1,],
+             Time = sim_result_3[2,], Step = "Step 3"),
+  data.frame(lambda = lambda_grid_4, RMSE_validation = sim_result_4[1,],
+             Time = sim_result_4[2,], Step = "Step 4"))
+
+library(ggplot2)
+ggplot(result) + geom_line(aes(x=lambda,y=RMSE_validation), linetype= 2)+
+  geom_point(aes(x=lambda,y=RMSE_validation))+
+  facet_wrap(~Step, scales = "free")
+
+ggplot(result[result$Time<300,]) + geom_line(aes(x=lambda,y=Time), linetype= 2)+
+  geom_point(aes(x=lambda,y=Time))
+

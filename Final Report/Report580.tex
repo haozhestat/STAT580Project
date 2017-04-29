@@ -1,0 +1,666 @@
+\documentclass[12pt]{article}
+\usepackage{rotating}
+\usepackage{caption}
+\usepackage{amsfonts}
+\usepackage{listings}
+%\usepackage[top=1.4in,bottom=1.4in,left=1.3in,right=1.3in]{geometry}
+\usepackage[top=1in,bottom=1in,left=1in,right=1in]{geometry}
+\usepackage{lscape}
+\usepackage{amsmath}
+\usepackage{graphicx,psfrag,epsf}
+\usepackage{enumerate}
+\usepackage{url} % not 
+\usepackage{mathrsfs}
+\usepackage{amssymb}
+\usepackage{float}
+\usepackage{setspace}
+\usepackage{booktabs}
+\usepackage{url}
+\usepackage{xcolor}
+\usepackage{amsmath}
+\usepackage{graphicx}
+\usepackage{bm}
+%\usepackage{cite}wi
+\usepackage[numbers,sort&compress]{natbib}
+\bibliographystyle{plain}
+\usepackage{pdfpages}
+\usepackage{multirow}
+\usepackage{color}
+%\usepackage[FIGTOPCAP]{subfigure}
+%\usepackage{subfig}
+%\usepackage{subfigure}
+%\renewcommand\thesubfigure{\Alph{subfigure}}
+\captionsetup[figure]{labelfont=bf}
+\graphicspath{{figures/}}
+\usepackage{amssymb}
+%\doublespacing
+\usepackage{rotating}
+
+\font\twelvesmc=cmcsc10 scaled\magstep1 %text smc
+\newcommand{\smc}{\twelvesmc}
+\newtheorem{thm}{\underline{\smc Theorem}}
+
+\lstset{
+	language=R,
+	basicstyle=\scriptsize\ttfamily,
+	commentstyle=\ttfamily\color{gray},
+	numbers=left,
+	numberstyle=\ttfamily\color{gray}\footnotesize,
+	stepnumber=1,
+	numbersep=5pt,
+	backgroundcolor=\color{white},
+	showspaces=false,
+	showstringspaces=false,
+	showtabs=false,
+	frame=single,
+	tabsize=2,
+	captionpos=b,
+	breaklines=true,
+	breakatwhitespace=false,
+	title=\lstname,
+	escapeinside={},
+	keywordstyle={},
+	morekeywords={}
+}
+
+\begin{document}
+	
+\author{Dapeng Hu, Qinglong Tian, Haozhe Zhang, Min Zhang\\
+	Department of Statistics, Iowa State University, Ames, IA 50011\\}
+% For blinded version:
+%\author{} 
+\title{\bf Soft-Impute Matrix Completion Project Report}
+\date{}
+\maketitle
+
+\section{Summary}
+The purpose of matrix completion is to solve the problems of the following type: given data in the
+form of an $m\times n$ matrix $Z = \{Z_{ij}\}$, find an approximating matrix $\widehat{Z}$ that imputes or fills in missing entries in $Z$. There are wide applications of matrix completion. One popular example is the movie-rating problem in the "Netflix" Competition , where the data is the basis for a recommender system.
+
+The matrix completion problem is ill-specified
+unless we impose additional constraints on the unknown matrix $Z$, and one
+common choice is a rank constraint.  Suppose that we observe all entries of the matrix $Z$ indexed by the subset $\Omega \subset \{1, \ldots ,m\} \times \{1, \ldots, n\}$. One approach is to consider estimators based on optimization problems of the form
+\begin{equation}\label{rank matrix}
+\widehat{Z} = \underset{M}{\arg \min} ||Z-M||^{2}_{F} ~~\text{subject to rank}(M) \leq \delta,
+\end{equation}
+where $||\cdot||_{F}^{2}$ is Frobenius norm of a matrix. However, this rank-minimization problem is computationally intractable (NP-hard), and cannot be solved in general even for moderately large matrices. Alternatively, we consider the following small modification to (\ref{rank matrix}):
+\begin{equation}\label{svd}
+\widehat{Z} = \underset{M}{\arg \min} ||Z-M||^{2}_{F} ~~\text{subject to }||M||_{*} \leq \delta,
+\end{equation}
+where $||\cdot||_{*}^{2}$ is the nuclear norm, i.e., the sum of the sigular values. Under many situations the nuclear norm is an effective convex relaxation to the rank
+constraint, and hence problem (\ref{svd}) is convex. 
+
+Soft-Impute Algorithm was proposed and studied in \cite{mazumder2010spectral} to solve problem (\ref{svd}). It was shown in \cite{mazumder2010spectral}  that Soft-Impute Algorithm is guaranteed to converge at least sub-linearly, meaning that $O\left(\frac{1}{\epsilon}\right)$ iterations are sufficient to 
+compute a solution that is $\epsilon$-close to the global optimum.
+The procedure for Soft-Impute Algorithm is introduced briefly as follows. First consider the case
+where there is no missing data, to solve (\ref{svd}), we simply
+compute the SVD of Z, soft-threshold the singular values by $\lambda$, and reconstruct
+the matrix. The singular value decomposition (SVD) provides an effective method here. Then, we start with an initial guess for the missing values, compute
+the (full rank) SVD, and then soft-threshold its singular values by $\lambda$. We reconstruct the corresponding SVD approximation and obtain new
+estimates for the missing values. This process is repeated until convergence. 
+
+%There are a variety of theoretical results for matrix completion using nuclear norm
+%regularization. 
+
+\section{Various SVD Implementations and Comparison}
+\subsection{Brief introduction to SVD Implementations}
+\begin{itemize}
+	\item \textbf{C code via LAPACK}:\\
+	The core part of the c code for implementing SVD is the LAPACK routine DGESVD and DGEMM. The first argument of the C main function is filename, and the second argument is $\lambda$ used in Soft-Impute Algorithm. The format of the input data is like the given Lena dataset. The first row is the dimension of the matrix with N is the row, and P is the column. N >= P.  The second row is the matrix arranged by column.
+		\item \textbf{R internal svd function}: \\
+	The main functions used are the LAPACK routines DGESDD and ZGESDD. The performance of R internal svd function essentially depends on the performance of LAPACK.
+	\item \textbf{svd Package}: \\
+	There are three functions in the svd package that are related to the singular-value decomposition. Because “trlan.svd” and “ztrlan.svd” will not return the right singular vectors and we need that vector in soft-impute algorithm. So we are not going to use those two functions. We only use “propack.svd” to implement the soft-impute algorithm. 
+	PROPACK does SVD via the implicitly restarted Lanczos bidiagonalization with partial reorthogo- nalization.
+	\item \textbf{RcppArmadillo Package}: \\	
+	The “RcppArmadillo” package includes the header files from the “Armadillo” library, which is a templated C++ linear algebra library. Various matrix decompositions are provided through optional integration with LAPACK and ATLAS libraries1.  We use svd in “Armadillo” to implement the soft-impute algorithm.
+	\item \textbf{irlba package}: \\
+	We use “irlba” function in the irlba package. The augmented implicitly restarted Lanczos bidiagonalization algorithm (IRLBA) finds a few approximate largest singular values and corresponding singular vectors of a sparse or dense matrix using a method of Baglama and Reichel. It is a fast and memory-efficient way to compute a partial SVD.
+	The maximum number of singular values that can be calculated in this function is 
+	where  is the dimension of the matrix.
+	To find the suitable number of singular values in each iteration of the soft-impute algorithm, we compare the number of thresholded singular values with the maximum allowed number of singular values then take the minimum of these two values as the suitable number in each iteration.
+\end{itemize}
+
+	\subsection{Simulation Study}
+	
+	There are many aspects that can reflect performance of a method such as training error, speed and memory usage. In our comparison, these four methods are just different implementations of the same algorithm so they should have the same training error. And in our simulation experiments, they do have the same training error so we are not going to compare the training error. We are going to compare the speed of each method in our experiments.
+	
+	By learning the soft-impute algorithm, we think that three factors may influence the speed. They are dimension of the matrix, missing rate and true rank of the matrix. In our experiment, we let one variable vary and keep other two variables the same to say how each variable affect the performance.
+	
+	To compare the speed of each method, we use “microbenchmark” to calculate the time usage and take the median as the result.
+	
+	\subsubsection{Comparison under different matrix dimensions}
+	
+\begin{table}[ht]
+	\centering
+	\caption{Time consumption under different matrix dimensions with missing rate = 0.5 and true matrix rank = 8 }\label{dimension}
+	\begin{tabular}{cccccc}
+		\hline\hline
+	No. of rows & No. of columns & R interval svd & propack.svd & RcppArmadillo & irlba\\
+	\hline
+	20&20&0.00246&0.00513&\textbf{0.00232}&0.00335\\
+	50&50&0.02001&0.03667&0.01876&\textbf{0.01680}\\
+	100&100&0.12742&0.20482&\textbf{0.12269}&0.13500\\
+	500&500&18.0418&28.8572&\textbf{17.0435}&72.1405\\
+	1000&1000&\textbf{154.7145}&237.7374&164.2245&1197.6262\\
+		\hline\hline
+	\end{tabular}
+\end{table}
+
+In general, the result shows that the computation speed of “R internal svd” and “RcppArmadillo” methods are similar and are the fastest method. When the matrix size is relatively large (1000,1000), the “R internal svd” performs a little better than “RcppArmadillo”. Otherwise, “RcppArmadillo” is a little better.
+
+The “propack.svd” method is slower than the two methods mentioned above.  While the relative difference with those two becomes less and less as the dimension becomes larger and larger. 
+
+As for the “irlba” method, when the dimension is relatively small ($\leq 100$), this method performs similarly compared with “R internal svd” and “RcppArmadillo” methods. But when the matrix dimension is relatively large, the time usage of this method will go up dramatically as we can see in Table \ref{dimension}.
+
+	\subsubsection{Comparison under different missing rates}
+	
+	\begin{table}[ht]
+		\centering
+		\caption{Time consumption under different missing rates with matrix dimension $=100\times 100$ and true matrix rank = 8 }\label{missing rate}
+		\begin{tabular}{cccccc}
+			\hline\hline
+			Missing rate & R interval svd & propack.svd & RcppArmadillo & irlba\\
+			\hline
+		0.4&0.10531&*&\textbf{0.10293}&0.13194\\
+		0.5&0.13925&0.21978&\textbf{0.13327}&0.14786\\
+		0.6&0.14494&0.23622&0.14057&\textbf{0.12816}\\
+		0.7&0.19295&0.30568&0.18452&\textbf{0.13670}\\
+		0.9&0.28146&*&0.26986&\textbf{0.09553}\\
+			\hline\hline
+		\end{tabular}
+	\end{table}
+	
+As a whole, the “R internal svd” and “RcppArmadillo” perform similarly while “RcppArmadillo” is a little bit faster than “R internal svd”.
+
+The “propack.svd” method is the most unstable method in this situation. When the missing rate is too large or too small, this method fails to execute. Even though the missing rate is suitable, this method is also the slowest one among all the methods.
+
+“irlba” method performs better as the missing rate goes up. For other three methods, they use more time as the missing rate goes up. While the “irlba” method is different.
+
+When the missing rate is large ($\geq 0.6$) and the dimension is medium (e.g., $100\times100$), the “irlba” method is the fastest method.
+
+	\subsubsection{Comparison under different matrix ranks}
+	
+	\begin{table}[ht]
+		\centering
+		\caption{Time consumption under different matrix ranks with matrix dimension $=100\times 100$ and missing rate = 0.5}\label{rank}
+		\begin{tabular}{cccccc}
+			\hline\hline
+			True matrix rank & R interval svd & propack.svd & RcppArmadillo & irlba\\
+			\hline
+4&0.11331&0.18107&0.10620&0.10551\\
+8&0.12308&0.19143&0.11715&0.12893\\
+12&0.14849&0.23911&0.14536&0.16806\\
+16&0.16822&*&0.17642&0.23704\\
+			\hline\hline
+		\end{tabular}
+	\end{table}
+	
+All of the methods use more time as the true rank goes up. “RcppArmadillo” method is the fastest although it is just a little faster than “R internal svd” method. The “propack.svd” is still the slowest and most unstable method because when the true rank is 16 it fails to execute again. For the “irlba” method, when the true rank is small(eg $\leq 8$), the speed is very competitive.  When the true rank is large, it becomes slower than “R internal svd” and “RcppArmadillo” method.
+
+\section{Application}
+
+\subsection{Lena Image Data}
+
+After comparing different methods, we decide to use “R internal svd” to solve this problem.  To design a grid of , we first use svd to decompose the training matrix and get the singular values of it . Then we use the quantile of the singular values of the training matrix to design the grid of  . There are two reason why we do in this way. The first is that we have no idea about the range of  so we need some reference to specify. The second reason is that by using quantile we can reduce the number of search times. We first use  (The subscript represents the quantile) as the  vector. And calculate the RMSE in the validation set and we get the Figure \ref{lena1}.
+
+\begin{figure}
+	\centering
+	\begin{minipage}[c]{0.32\textwidth}
+		\centering
+		\includegraphics[angle=0,width=5.5cm,height=5cm]{lena1}
+		\caption{}\label{lena1}
+	\end{minipage}
+	\begin{minipage}[c]{0.32\textwidth}
+		\centering
+		\includegraphics[angle=0,width=5.5cm,height=5cm]{lena2}
+		\caption{}\label{lena2}
+	\end{minipage}
+	\begin{minipage}[c]{0.32\textwidth}
+		\centering
+		\includegraphics[angle=0,width=5.5cm,height=5cm]{lena3}
+		\caption{}\label{lena3}
+	\end{minipage}
+\end{figure}
+
+We find that the minimal of the RMSE corresponding to . Then we do further search. We use  as the second  vector. After calculating the RMSE in the validation set we get the Figure \ref{lena2}. This time we find the minimal of the RMSE corresponding to . We continue our search to find the best . We use  as the third  vector. The RMSE can be seen in the Figure \ref{lena3}. In Figure \ref{lena3}, we can see that the minimal of RMSE corresponding to   which is the best  we choose.
+As we can see, by using quantile, we only need  s to select the turning parameter. In this way, we can reduce the total number of s to be considered and therefore save a lot of time.
+Figure \ref{lena4} is the image with 40\% pixels randomly missing. And Figure \ref{lena5} is the image after using the soft-impute to fix.The total rank in the reconstructed image is 83.
+
+\begin{figure}
+	\centering
+	\begin{minipage}[c]{0.49\textwidth}
+		\centering
+		\includegraphics[angle=0,width=9cm,height=9cm]{lena4}
+		\caption{Imputed Lena Image}\label{lena4}
+	\end{minipage}
+	\begin{minipage}[c]{0.49\textwidth}
+		\centering
+		\includegraphics[angle=0,width=9cm,height=9cm]{lena5}
+		\caption{Original Lena Image}\label{lena5}
+	\end{minipage}
+\end{figure}
+
+\subsection{MovieLens Dataset}
+
+\section{Accelerating \textbf{Soft-Impute}}
+Let us consider a general setting of convex composite minimization problem
+\begin{equation*}
+\underset{\bm{x}}{\min}\text{ }F(\bm{x}) ;= f(\bm{x}) + g(\bm{x}),
+\end{equation*}
+where $f(\bm{x})$ is convex and L-smooth (i.e., gradient is Lipschitz continuous), and  $g(\bm{x})$ is convex and non-smooth. The proximal operation of $g$ is easy to calculate here.  The proximal gradient method \cite{bruck1975iterative} is used to solve this problem: for each iteration $k = 0,1,2,\ldots$,
+\begin{equation*}
+\bm{x}_{k+1} = \text{prox}_{\gamma_{k}, g}(\bm{x}_{k}-\gamma_{k}\triangledown f(\bm{x}_{k})) = 
+\underset{\bm{x}}{\arg\min}\left[\frac{1}{2\gamma_{k}}\left|\left|\bm{x} - \{\bm{x}_{k}-\gamma_{k}\triangledown f(\bm{x}_{k})\}\right|\right|^{2}_{2}+g(\bm{x})\right]
+\end{equation*}
+The following theorem shows that the proximal gradient method attains the convergence rate of $O\left(\frac{1}{k}\right)$.
+
+\begin{thm}
+	Proximal gradient method with fixed step size $\gamma_{k} = \frac{1}{L}$ satisfies the following convergence rate
+	\begin{equation*}
+	F(\bm{x}_{k}) - F(\bm{x}^{*}) \leq \frac{L||\bm{x}_{0}-\bm{x}^{*}||^{2}_{2}}{2k}.
+	\end{equation*}
+\end{thm}
+
+Originally developed in \cite{nesterov2007gradient} and \cite{beck2009fast}, we can accelerate the proximal gradient method as follows:
+\begin{eqnarray*}
+\bm{x}_{k+1} &=& \text{prox}_{\gamma_{k}, g}(\bm{y}_{k}-\gamma_{k}\triangledown f(\bm{y}_{k})) \\
+\bm{y}_{k+1} &=& \bm{x}_{k+1} +\beta_{k}(\bm{x}_{k+1}-\bm{x}_{k}).
+\end{eqnarray*}
+A common choice for $\beta$: $\beta_{k} = \frac{\lambda_{k}-1}{\lambda_{k}+1}$ where $\lambda_{0} = 0$, $\lambda_{k+1} = \frac{1+\sqrt{1+4\lambda^{2}_{k}}}{2}.$ The acceleration for this choice of $\beta$ is called the Fast Iterative Soft Thresholding Algorithm (FISTA) derivation \cite{beck2009fast}. It was shown in \cite{beck2009fast} that
+\begin{thm}
+	The sequences $\bm{x}_{k}$, $F(\bm{x}_{k})$ generated via FISTA with either a constant or backtracking (with ratio $\alpha \geq 1$) stepsize rule satisfy
+	\begin{equation*}
+	F(\bm{x}_{k}) - F(\bm{x}^{*}) \leq \frac{2\alpha L||\bm{x}_{0}-\bm{x}^{*}||^{2}_{2}}{k^{2}}.
+	\end{equation*}
+\end{thm}
+Soft-Impute Algorithm is a special example of proximal gradient method:
+\begin{equation*}
+\underset{Z}{\min} ~\underbrace{\frac{1}{2}||W-Z||^{2}_{F}}_{f(Z)} ~+~\underbrace{\lambda||Z||_{*}}_{g(Z)}.
+\end{equation*}
+Lemma 1 in \cite{mazumder2010spectral} shows that the solution to the above optimization problem is  given by $\widehat{Z} = \bm{S}_{\lambda}(W)$ where  $\bm{S}_{\lambda}(W) = UD_{\lambda}V'$ with $D_{\lambda} = diag\{(d_{1}-\lambda)_{+}, \ldots, (d_{r}-\lambda)_{+}\}$,
+$UDV'$ is the SVD of $W$, $D = diag(d_{1}, \ldots, d_{r})$, and $t_{+} = \max(t,0)$.  $\bm{S}_{\lambda}(W)$ is a type of soft-thresholding operator. 
+
+As we have shown, Soft-Impute Algorithm has a convergence rate of $O\left(\frac{1}{k}\right)$, which for large $k$ is worse than the Accelerated Soft-Impute Algorithm with rate $O\left(\frac{1}{k^{2}}\right)$. However, the numeric results in \cite{mazumder2010spectral} show that Soft-Impute Algorithm performs favorably compared with the accelerated version illustrated in Figure 5 of \cite{mazumder2010spectral}.
+
+
+\vskip 0.2in
+\bibliographystyle{Chicago}
+\nocite{halko2011finding, hastie2015statistical, bruck1975iterative, mazumder2010spectral, oh2015fast, wong2015matrix, nesterov2007gradient, beck2009fast}
+\bibliography{Report580}
+
+\newpage
+\section*{APPENDIX}
+\subsection*{C code via LAPACK}
+	\lstinputlisting[language=R]{../Codes/Min/SoftImpute.c}
+\subsection*{R internal svd function}
+	\lstinputlisting[language=R]{../Codes/haozhe/softimpute_internalsvd.R}
+\subsection*{svd package}
+\lstinputlisting[language=R]{../Codes/haozhe/softimpute_rpacksvd.R}
+\subsection*{RcppArmadillo Package}
+\subsection*{irlba package}
+
+%
+%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
+%%
+%%
+%%
+%
+%\baselineskip=12pt
+%\par\vfill
+%\noindent
+%{\bf Key Words:}
+%Machine learning;
+%Prediction;
+%Lasso;
+%Random forests;
+%%Interpolation;
+%Extrapolation.
+%\par\medskip\noindent
+%{\bf Short title}: Semiparametric Efficient Regression.
+%%
+%%
+%
+%\section{Introduction}
+%Random forest (RF) methodology, proposed by L. Breiman \cite{breiman2001random}, is one of the most popular machine learning techniques for regression and classification problems. In the last few years, there have been many methodological and theoretical advances in the random forests approach. Some methodological developments and extensions include case-specific random forests \cite{xu2016case}, multivariate random forests \cite{segal2011multivariate}, quantile regression forests \cite{meinshausen2006quantile}, random survival forests \cite{ishwaran2008random}, enriched random forests for microarry data \cite{amaratunga2008enriched} and predictor augmentation in random forests \cite{xu2014predictor} among others. For theoretical developments, the statistical and asymptotic properties of random forests have been intensively investigated. Advances have been made in the areas such as consistency \cite{biau2008consistency} \cite{ scornet2015consistency}, variable selection \cite{genuer2010variable} and the construction of confidence intervals \cite{wager2014confidence}.
+%
+%Although RF methodology has proven itself to be a reliable predictive approach in many application areas \cite{biau2016random}, there are some cases where random forests may suffer. First, as a fully nonparametric predictive algorithm, random forests may not incorporate known relationships between the response and the predictors. Second, random forests may fail in extrapolation problems where predictions are required at points out of the domain of the training dataset. For regression problems, a random forest prediction is an average of the predictions produced by the trees in the forest. Because each tree prediction corresponds to some weighted average of the response values $Y_{1},\ldots, Y_{n}$ observed in the original training data, we can view the final random forest prediction at some observed predictor vector $\bm{X}_{0}$ as a convex combination of the training response values given by
+%\begin{equation}
+%\widehat{Y}(\bm{X}_{0})=\sum_{i=1}^{n}w_{i}(\bm{X}_{0})Y_{i},
+%\end{equation}
+%where $w_{i}(\bm{X}_{0}), \ldots, w_{n}(\bm{X}_{0})$ are nonnegative weights with the constraint $\sum_{i=1}^{n}w_{i}(\bm{X}_{0})=1$. It follows that 
+%\begin{equation} \label{bounds}
+%\underset{1\leq i \leq n}{\mathrm{min}}Y_{i} \leq \widehat{Y}(\bm{X}_{0}) \leq \underset{1\leq i \leq n}{\mathrm{max}}Y_{i}.
+%\end{equation}
+% As a consequence, the predictions given by random forests are always within the range of response values in the training dataset, which is problematic if the response values in the target dataset tend to fall outside this range.
+%%The predictions of random forests aggregate the predictions given by the trees. The predicted value of RFs is the weighted average of all the response values in the training dataset while all the weights are nonnegative and summed to be one. 
+%%
+%%As a consequence, the predictions given by random forests are always smaller than or equal to the largest response value in the training dataset, even if the response values in the target dataset are larger than the largest response value in the training dataset. 
+%
+%We illustrate the above issues by considering the problem of forecasting Iowa corn yield. The dataset, that will be further introduced in Section \ref{example2}, contains county-level corn yield data and predictor variables that provide information about soil quality and environmental conditions during 28 growing seasons. We used random forests to forecast corn yields in the coming year by using the yield and predictor data in previous years as a training dataset. Random forests failed to outperform multivariate linear regression in this problem. For example, the root mean square error (RMSE) of random forests for predicting 2015 corn yield was slightly more than $10\%$ higher than the RMSE of multivariate linear regression. 
+%
+%\begin{figure}[ht]
+%	\centering
+%	\includegraphics[scale=0.7]{corn_yield_trend.pdf}
+%	\caption{The corn yields in each county of Iowa from 1926 to 2015 and the corresponding Loess smooth curves of corn yields against year.}\label{introduction_figure}
+%\end{figure}
+%
+%There are at least two reasons why multivariate linear regression outperforms random forests for predicting Iowa corn yield. First, in some years, the weather was so hot and dry that the values of temperature and precipitation were beyond the ranges of those in the training dataset, which creates an extrapolation problem. Second, corn yield has been increasing generally over time due to consistent genetic improvement of maize and agricultural technology developments. When forecasting corn yield for a future year using random forests,  as shown by Expression (\ref{bounds}), each forecast is bounded above by the largest corn yield in the training dataset, even if the past trend suggests a record-setting crop for that future year.
+%
+%Next we use a simulated example to illustrate this point. Let the data-generating model be $Y=f(\bm{X})+10Z+\epsilon$, where $Y$ is the response variable, $\bm{X}=(X_{1},\ldots,X_{10})$ and $Z$ are the predictors, and $\epsilon$ is a mean-zero error term. Suppose 
+%\begin{equation}
+%f(\bm{X})=0.1e^{4x_{1}}+\frac{4}{1+e^{-20(x_{2}-1/2)}}+3x_{3}+2x_{4}+x_{5}+0\times\sum_{i=6}^{10}x_{i},
+%\end{equation}
+%a partially nonlinear additive function that is Equation (56) in J. H. Friedman's ``MARS" paper \cite{friedman1991multivariate}. We want to predict $Y$ by using the predictors $\bm{X}$ and $Z$. The distributions of predictors $\bm{X}$ in both training and validation datasets are identical, and they are independently simulated from the uniform distribution $\text{unif}(0,1)$. In the training dataset, the predictor variable $Z$ is sampled from $\text{unif} (0,0.8)$, while $Z$ is sampled from $\text{unif} (0,1)$ in the validation dataset. The sample sizes for the training and the validation datasets are $1500$ and $300$, respectively.
+%
+%Figure \ref{introduction_figure} presents prediction errors when analyzing the simulated data with a random forest and with a regression-enhanced random forest (RERF), the method we introduce in this paper. The red points and the red smoothed curve in the Figure \ref{introduction_figure} illustrate the relationship between the predictor $Z$ and the pointwise prediction errors $Y-\widehat{Y}$ given by the standard RFs. When the predictor $Z > 0.8$, the predicted errors are relatively large. This example indicates that the random forest approach suffers in linear extrapolation.
+%
+%\begin{figure}[ht]
+%	\centering
+%	\includegraphics[scale=0.7]{introduction_new}
+%	\caption{The pointwise prediction errors $Y-\widehat{Y}$ given by a random forest (red) and a regression-enhanced random forest (blue) against the predictor $Z$ and the corresponding Loess smooth curves of $Y-\widehat{Y}$ against $Z$.}\label{introduction_figure}
+%\end{figure}
+%
+%To address the challenge, we develop RERF methodology that generalizes RF methodology by combining penalized parametric regression with RFs. The purpose of this paper is to introduce RERFs and investigate the prediction performance of RERFs in comparison with RFs. Parametric methods, such as multivariate linear regression and Lasso, can parsimoniously account for scientific mechanisms that dictate approximate linear relationships between the response and predictor variables and allow for effective extrapolation out of the training dataset domain \cite{breiman2001statistical}. Nonparametric machine learning algorithms, such as random forests and artificial neural networks, can account for nonlinearity and complex factor interactions. RERFs can capitalize on the strength of the two types of methods and overcome the corresponding disadvantages. The simulation study and the two real data examples in this paper reach the same conclusion: the prediction performance of RERFs is better than that of the standard RFs in both interpolation and extrapolation problems. Furthermore, in extrapolation cases, RERFs far outperform RFs.
+%
+%The rest of the paper is organized as follows. Section 2 introduces the algorithm
+%for building RERFs and also discusses tuning parameter selection. In Section 3, we conduct a simulation study to examine the prediction performance of RERFs in comparison to RFs and Lasso. To illustrate the proposed methodology and demonstrate its relevance in
+%practice, Section \ref{example} provides two real data examples involving high-performance concrete strength prediction and Iowa corn yield forecasting. We conclude with further discussion of RERF methodology in Section \ref{discussion}.
+%
+%\section{Method} \label{Method}
+%Regression-enhanced random forests (RERFs) is a hybrid of random forests and penalized parametric regression. RERFs can improve random forests in prediction accuracy and also incorporate known relationships between the response variable and the predictors. Penalized parametric regression involves a penalty function $P(\cdot)$ applied on the regression coefficient $\bm{\beta}$, which amounts to solving a minimization problem of the form
+%\begin{equation}
+%\underset{\bm{\beta}}{\textrm{min}}\{L(Y_{i},\widehat{Y}_{i})+\lambda P(\bm{\beta})\},
+%\end{equation}
+%where $L(\cdot, \cdot)$ is a loss function and $\widehat{Y}_{i}$ is the predicted response value that can be regarded as a function of $\beta$. $\lambda$ is called the penalty parameter. Lasso with an $\ell^{1}$ penalty function and Ridge regression with an $\ell^{2}$ penalty function are two examples of penalized parametric regression. Penalized parametric regression can be used to capture the global trend and incorporate scientific knowledge about linear structure, but may not be flexible enough to accommodate nonlinearity.  Random forests offer a flexible nonparametric approach for prediction, which leads to small fitting errors compared with parametric methods. However, small fitting errors do not necessarily imply small prediction errors, especially in extrapolation problems. As shown by Figure \ref{introduction_figure} and the simulated example in Section 1, random forests may suffer in extrapolation problems.
+%
+%Let $Y$ be a continuous response variable and $\bm{X}$ a $p$-dimensional vector of predictor variables. We assume a standard data-generating model given by 
+%\begin{equation}
+%Y = f(\bm{X}) +\epsilon
+%\end{equation}
+%for both training and validation datasets. We assume a training dataset $\pmb{C}=\{C_{i}=(\bm{X}_{i}, Y_{i}):i=1,\ldots, N\}$ with a sample size $N$ is available to fit the model for prediction. The random forests algorithm has two tuning parameters \cite{breiman2001random}, mtry and nodesize,  denoted as $m$ and $s$. The RERF algorithm is described as follows:\\
+%
+%%For the training dataset, $Y=f_{1}(\bm{X})+\epsilon,~\bm{X}\in D_{1}$; for the target dataset, $Y=f_{2}(\bm{X})+\epsilon,~\bm{X}\in D_{2}$.
+%%$f_{1}$ and $f_{2}$ are unknown deterministic functions and $D_{1}$ and $D_{2}$ are two domain sets in $\mathbb{R}^{p}$. $\epsilon$ is a mean-zero error term. The assumption that $f_{1}(\bm{X})=f_{2}(\bm{X})$ for any $\bm{X}\in D_{1}\cup D_{2}$ is a common but usually hidden assumption for a general prediction problem. However, it is not necessary to assume $D_{1}= D_{2}$. If $D_{2}\subseteq D_{1}$, the problem becomes a standard interpolation problem; if $D_{2} \cap D_{1}=\varnothing$, the problems becomes an extrapolation problem, namely extrapolation. In many real problems, as shown in section \ref{example1} and \ref{example2}, $D_{2} \nsubseteqq D_{1}$ and $D_{2} \cap D_{1}\neq \varnothing$, which is a mixture of interpolation and extrapolation. 
+%
+%%\subsection{Algorithm}
+%\noindent {\bf Regression-Enhanced Random Forest Algorithm}
+%\begin{itemize}
+%	\item Step 1: Extend the $p$-dimensional predictor $\bm{X}$ to a $(p+q)$-dimensional predictor $\bm{X}^{*}$ by adding higher-order, interaction or other known parametric functions of $\bm{X}$.
+%	\item Step 2: Run Lasso of $Y$ on $\bm{X}^{*}$ with a pre-specified penalty parameter $\lambda$. Let $\bm{\widehat{\beta}}_{\lambda}$ be the estimated coefficient, and $\epsilon^{\lambda}=Y-\bm{X}^{*}\bm{\widehat{\beta}}_{\lambda}$ be the residual from Lasso. Create a new training dataset $\bm{C}^{\lambda}=\{C^{\lambda}_{i}=(\bm{X}_{i},\epsilon^{\lambda}_{i}):i=1,\cdots, N\}$.
+%	\item Step 3: Build a random forest $\bm{T}_{m,s}$ using $\bm{C}^{\lambda}$ with pre-specified $m$ and $s$. A prediction for the response at a given predictor value $\bm{X}_{0}$ is  $\widehat{Y}(\bm{X}_{0})=\bm{X}_{0}\bm{\widehat{\beta}}_{\lambda}+\bm{T}_{m,s}(\bm{X}_{0})$.
+%	\item Step 4: Select the tuning parameters ($\lambda, m, s$) through $k$-fold cross validation by repeating step 2 and step 3 for candidate values of $\lambda$, $m$, and $s$. The selected tuning parameters are denoted by $\lambda^{*}, m ^{*}$ and $s^{*}$.
+%	\item Step 5: The RERF prediction for the response at $\bm{X}_{0}$ is given by  $\widehat{Y}(\bm{X}_{0})=\bm{X}_{0}\bm{\widehat{\beta}}_{\lambda^{*}}+\bm{T}_{m^{*},s^{*}}(\bm{X}_{0})$.
+%\end{itemize} 
+%
+%
+%To explain the mechanics of RERFs, we will discuss each step in the algorithm in detail. Expanding the design matrix In step 1 is optional. Whether to add higher-order, interaction or other parametric terms should be decided by exploratory analysis or knowledge of the relationship between $Y$ and $\bm{X}$. The main aim of Lasso regression in Step 2 is to select variables in order to find a parametric structure that incorporates the global trend and known relationships between the response and predictors. The penalty parameter $\lambda$ controls the strength of variable selection. When $\lambda=0$, Lasso regression in Step 2 is equivalent to multivariate regression without regularization. When $\lambda \rightarrow \infty$, Lasso regression in Step 2 is equivalent to regressing on a constant value, i.e., fitting an intercept-only model. Thus, RERFs will be reduced to RFs for sufficiently large $\lambda$, and RFs can be viewed as a special case of RERFs.
+%
+%Tuning parameter selection in Step 4 is critical to the performance of RERFs. As a hybrid method of Lasso and RFs, regression-enhanced random forests have three tuning parameters: Lasso penalty parameter ($\lambda$), nodesize ($s$) and mtry ($m$).  Our approach for simultaneous selection of these three tuning parameters is an exhaustive search on 3-dimensional tuning parameter space. The value of $\lambda$ plays an important role in the prediction performance of RERFs. The optimal value of $\lambda$ for RERFs is not determined based on the cross-validation performance of the Lasso predicton. Instead, the optimal value of $\lambda$ is determined based on the cross-validation performance of the RERF, which involves building a RF with Lasso residuals as response values. The plausible values of $\lambda$ are positive and unbounded. In our numerical examples, we choose $\lambda$ from among the values in the set $\{\exp (\log(0.001)+h\times\frac{\log(100)-\log(0.001)}{99}): h =0,\ldots, 99\}$, which is a set of 100 points from 0 to 99 equally spaced on the logarithm scale. Following the advice of Breiman as recounted by Liaw and Wiener (2002) \cite{liaw2002classification}, we consider mtry equal to the default value of $\max\{1, \lfloor p/3\rfloor\}$ as well as half and twice the default value. For nodesize, we consider the default value of $5$ as well as $1$ (the value recommended by Breiman for classification problems). Throughout the paper, all the results from RERFs, Lasso and RFs were obtained by selecting tuning parameters by cross validation.
+% 
+%\section{Simulation study} \label{simulation}
+%In this section, we conduct a simulation study to examine the prediction performance of RERFs compared with RFs for both interpolation and extrapolation cases. We simulated data from a data-generating model given by 
+%\begin{equation}
+%Y = f(\bm{X}) +\epsilon.
+%\end{equation}
+%The independent random errors $\epsilon$ follow $N(0,0.5^{2})$. We considered three different structures for $f(\cdot)$:
+%\begin{itemize}
+%	\item $L$: a linear model with an additive structure
+%	\begin{equation}
+%	f(\bm{X})=x_{1}+x_{2}+2x_{3}+2x_{4}+0\sum_{i=5}^{10}x_{i},
+%	\end{equation}
+%	\item $P$: a partially linear model with an additive structure
+%	\begin{equation}
+%	f(\bm{X})=\sin(\pi x_{1})+\frac{4}{1+e^{-20x_{2}+10}}+2x_{3}+2x_{4}+0\sum_{i=5}^{10}x_{i},
+%	\end{equation}
+%	\item $N$: a non-additive partially linear model
+%	\begin{equation}
+%		f(\bm{X})=\sin(\pi x_{1})+\frac{4}{1+e^{-20x_{2}+10}}+2x_{3}+2x_{4}+3x_{3}x_{4}+0\sum_{i=5}^{10}x_{i}.
+%	\end{equation}
+%
+%	\end{itemize}
+%	 We also considered two different sampling distributions for $\bm{X}$ that lead to interpolation ($I$) and extrapolation ($E$) as follows:
+%	 \begin{itemize}
+%	 	\item $I$: all 10 predictor observations are i.i.d.\ $\textrm{unif}(0,1)$ in both training and validation datasets.
+%	 	\item $E$: $x_{3}$ observations are i.i.d.\ $\textrm{beta}(4,8)$ in the training dataset and  i.i.d.\ $\textrm{beta}(5,1)$ in the validation dataset, for which predictions of $Y$ are desired. The other 9 predictor observations are i.i.d.\ $\textrm{unif}(0,1)$ in both training and validation datasets.
+%	 \end{itemize}
+%	 Most of the observations generated from $\textrm{beta}(4,8)$ are less than $0.6$, while most of those generated from $\textrm{beta}(5,1)$ are larger than $0.6$. Thus, prediction for the second case ($E$) often involves extrapolation.
+%	 
+%	In total, we consider 6 simulation scenarios formed by all the combinations of $f(\cdot)$ and the distributions for $\bm{X}$ labeled as $L\times I$, $P\times I$, $N\times I$, $L\times E$, $P \times E$ and $N\times E$.
+%% six different data-generating models, covering the linear model, the additive model and the nonlinear model with interaction terms. Each data-generating model has 10 i.i.d. predictor variables from $\textrm{unif}(0,1)$ excluding $X_{1}$. Only the first 4 predictor variables are related to the response as indicated in the fourth column of Table \ref{simulation_table}. For the first three models (S1-1, S1-2, S1-3), $X_{3}$ in the training dataset and the target dataset are both generated from $\textrm{Unif}(0,1)$. In contrast, for the last three models (S2-1, S2-2, S2-3), $X_{3}$ in the training dataset is generated from $\textrm{Beta}(4,8)$ while $X_{3}$ in the target dataset is generated from $\textrm{Beta}(5,1)$ (See Figure \ref{simulation_distribution}).  
+% For each scenario, 1000 simulation runs were conducted. In each run, 1000 training observations and 100 validation observations were randomly and independently generated from the joint distribution of $(\bm{X},Y)$. We trained Lasso, RFs, and RERFs using training data. For each simulated training dataset, values of the tuning parameters for Lasso ($\lambda$), RFs ($s$, $m$) and RERFs ($\lambda$, $s$, $m$) were separately selected using cross-validation. Then we predicted response values for the validation data. Finally, the root mean square errors (RMSEs) were then calculated over the validation dataset. 
+%
+%A variety of implementations of random forests have been developed. We use the R package \textit{randomForest}  \cite{liaw2002classification} to  implement random forests algorithm throughout this paper. This package was derived from the Fortran code originally by Leo Breiman and Adele Cutler \cite{xu2016case}.  Lasso regression was implemented via the R Package \textit{glmnet} \cite{friedman2010regularization}.
+%
+%The RMSEs from the simulation are shown in Figure \ref{simulation_rmse}.  RERFs exhibited lower RMSE than RFs for both interpolation and extrapolation problems, regardless of whether Lasso performed better than RFs or not. Particularly in extrapolation cases, RERFs far outperformed RFs. The performance of RERFs was better than that of Lasso for all the models except $L\times I$ and $L\times E$. Because $L\times I$ and $L\times E$ are both linear models, Lasso is expected to perform well for these cases. Nevertheless, the RMSEs of Lasso and RERFs were very close for $L\times I$ and $L\times E$.
+%
+%As stated in Section \ref{Method}, the value of penalty parameter $\lambda$ has a substantial effect on the prediction performance of RERFs. Figure \ref{simulation_lambda} reports the selected penalty parameter values for Lasso and RERFs for different data-generating models. In general, the selected penalty parameter values of RERFs are larger than those of Lasso. Picking one simulated dataset from Scenario $N\times I$ as an example, the selected penalty parameter value is $0.018$ for Lasso yielding $5$ predictor variables $\{X_{2},X_{3}, X_{4}, X_{7},X_{8}\}$ with nonzero estimated coefficients, while the selected penalty parameter value is $0.222$ for RERF with $3$ predictors $\{X_{2},X_{3}, X_{4}\}$ used to generate the residuals in Step 2 of RERFs.
+%
+%%\begin{table}[ht]
+%%	\centering
+%%	\caption{Description of the distributions of $X_{3}$ in training and testing dataset and the data-generating models used in simulation study}\label{simulation_table}
+%%	\begin{tabular}{p{1cm}p{3.5cm}p{3.8cm}p{6cm}ccc}
+%%		\hline\hline
+%%		Model No.& Distribution of $X_{3}$ in training dataset& Distribution of $X_{3}$ in target dataset & Data-generating models\\ 
+%%		\hline
+%%		S1-1 &$\textrm{Unif}(0,1)$& $\textrm{Unif}(0,1)$&$f(X_{i})=x_{1i}+x_{2i}+2x_{3i}+2x_{4i}+0\sum_{j=5}^{10}x_{ji}$ \\
+%%		S1-2 & $\textrm{Unif}(0,1)$& $\textrm{Unif}(0,1)$&$f(X_{i})=sin(\pi x_{1i})+\frac{4}{1+e^{-20x_{2i}+10}}+2x_{3i}+2x_{4i}+0\sum_{j=5}^{10}x_{ji}$ \\
+%%		S1-3 & $\textrm{Unif}(0,1)$& $\textrm{Unif}(0,1)$&$f(X_{i})=sin(\pi x_{1i})+\frac{4}{1+e^{-20x_{2i}+10}}+2x_{3i}+2x_{4i}+3x_{3i}x_{4i}+0\sum_{j=5}^{10}x_{ji}$ \\%\hline
+%%		S2-1&$\textrm{Beta}(4,8)$&$\textrm{Beta}(5,1)$& $f(X_{i})=x_{1i}+x_{2i}+2x_{3i}+2x_{4i}+0\sum_{j=5}^{10}x_{ji}$ \\
+%%		S2-2 & $\textrm{Beta}(4,8)$&$\textrm{Beta}(5,1)$ & $f(X_{i})=sin(\pi x_{1i})+\frac{4}{1+e^{-20x_{2i}+10}}+2x_{3i}+2x_{4i}+0\sum_{j=5}^{10}x_{ji}$\\
+%%		
+%%		S2-3&$\textrm{Beta}(4,8)$&$\textrm{Beta}(5,1)$&$f(X_{i})=sin(\pi x_{1i})+\frac{4}{1+e^{-20x_{2i}+10}}+2x_{3i}+2x_{4i}+3x_{3i}x_{4i}+0\sum_{j=5}^{10}x_{ji}$ \\
+%%		\hline\hline
+%%	\end{tabular}
+%%\end{table}
+%
+%
+%\begin{figure}[ht]
+%	\centering
+%	\includegraphics[scale=0.7]{simulation_RERFs_new_2.pdf}
+%	\caption{Boxplots of the RMSE values for Lasso, RFs, and RERFs for each data-generating model in the simulation study of Section \ref{simulation}.}\label{simulation_rmse}
+%\end{figure}
+%
+%\begin{figure}[ht]
+%	\centering
+%	\includegraphics[scale=0.7]{simulation_lambda_new}
+%	\caption{Boxplots of the selected penalty parameter values for Lasso and RERFs for each data-generating model in the simulation study of Section \ref{simulation}.}\label{simulation_lambda}
+%\end{figure}
+%
+%%\begin{figure}[ht]
+%%	\centering
+%%	\includegraphics[scale=0.7]{x3_dist}
+%%	\caption{The distributions of $\textrm{Beta}(4,8)$ and $\textrm{Beta}(5,1)$}\label{simulation_distribution}
+%%\end{figure}
+%
+%
+%
+%
+%
+%
+%
+%%
+%%\begin{table}[ht]
+%%\centering
+%%\caption{RMSE for testing data}
+%%\begin{tabular}{rrrrrrrr}
+%%  \hline
+%%No. &Lasso& RF & RERFs\\ 
+%%  \hline
+%%1 & $0.865\pm 0.035$ & $0.601\pm0.030$& $0.568\pm 0.027$\\
+%%2 & $0.873\pm 0.121$ & $0.906\pm0.140$& $0.630\pm 0.216$\\
+%%   \hline
+%%\end{tabular}
+%%\end{table}
+%\section{Examples} \label{example}
+%\subsection{High-performance concrete strength example}\label{example1}
+%We use the high-performance concrete strength dataset  \cite{yeh1998modeling} as a real example to demonstrate our methodology. The concrete strength dataset is available on the UC Irvine Machine Learning Repository website, and has been widely used for evaluating machine learning algorithms, such as in \cite{xu2016case} and \cite{graczyk2010nonparametric}. It contains 1030 observations, with eight quantitative predictors (cement, water, fly ash, blast furnace slag, superplasticizer, coarse aggregate, fine aggregate and age of testing), and a response variable (concrete compressive strength). The Abrams rule \cite{popovics1990analysis} implies the approximate proportionality between the cement-to-water ratio (C/W) and the concrete compressive strength, so the cement-to-water ratio was computed as a predictor and included in the dataset.
+%
+%Predicting concrete compressive strength (CCS) given amounts of ingredients and age is an important problem for civil engineering. However, high-performance concrete is such a highly complex material that modeling its strength behavior is very difficult. Exploratory analysis shows that the relationships between high-performance concrete strength and ingredients are nonlinear, and there are substantial interactions among predictors. Many previous studies have used machine learning algorithms, such as artificial neural networks and random forests, to tackle this problem. 
+%
+%We compare the prediction performance of RERFs and RFs under six scenarios shown in Table \ref{concrete_scenario}. Scenario INT1 and INT2 are interpolation cases, while the rest are extrapolation cases. In Scenario INT1 and INT2, the complete dataset is randomly divided into training dataset and validation dataset. In Scenario EXT1 and EXT2, the complete dataset is divided based on the value of concrete compressive strength (CCS) so that the domains of CCS in the training dataset and validation dataset are disjoint. In Scenario EXT3 and EXT4, the cement-to-water ratios in the training dataset and validation dataset also have disjoint domains. We run 1000 simulations for each scenario. 
+%
+%%In the implementation of RERFs for concrete strength dataset, we did not include high-order or interaction terms of predictors in Step 1 of RERFs. However, the exploratory analysis shows that the relationships between concrete strength and ingredients are nonlinear and there are interactions between predictors. To attain the minimal error, less predictors should be selected in Step 2 of RERFs algorithm. 
+%
+%The computing results show that the average of selected penalty parameter values for Lasso is $0.08$, while the average of selected penalty parameter values for RERFs is $1.0$. Thus, there are fewer predictor variables that have nonzero estimated coefficients in Step 2 of RERFs than in Lasso.
+%
+%Figure \ref{concrete_rmse} illustrates the RMSE values for Lasso, RFs and RERFs for each scenario, by which we can make the same conclusion as that in the simulation study. In the concrete strength prediction example, RERFs exhibits better prediction performance than RFs in both the interpolation and extrapolation cases, no matter whether Lasso is better than RFs or not. Particularly, in the extrapolation cases, RERFs approach far outperforms RFs. 
+%
+%\begin{table}[ht]
+%	\centering
+%	\small
+%	\caption{Description of training and validation datasets in the concrete strength prediction example}\label{concrete_scenario}
+%	\begin{tabular}{lp{3.8cm}p{3.0cm}p{2.0cm}p{2.4cm}}%{cp{3.5cm}p{3.5cm}p{7cm}ccc}
+%		\hline\hline
+%		Scenario & Training set& Validation set & \small{Training set sample size} & \small{Validation set sample size}\\ 
+%		\hline
+%INT1& Random $3/4$ & Remaining $1/4$ & 772& 258\\
+%INT2&Random $1/2$ & Remaining $1/2$ & 515& 515\\
+%EXT1&CCS $>25$ &CCS $\leq 25$& 735& 295\\
+%EXT2&CCS$<16$ or CCS$>56$ & $16\leq$ CCS $\leq 56$ &761& 269\\
+%EXT3&C/W$<2$&C/W$\geq 2$ & 793&237\\
+%EXT4&C/W$<1$ or C/W$>3$ & $1\leq$ C/W $\leq 3$ &804& 226\\
+%		\hline\hline
+%	\end{tabular}
+%\end{table}
+%
+%\begin{figure}[ht]
+%	\centering
+%	\includegraphics[scale=0.7]{concrete_example_new}
+%	\caption{Boxplots of the RMSE values for Lasso, RFs and RERFs for each scenario in the concrete strength prediction example.}\label{concrete_rmse}
+%\end{figure}
+%
+%
+%
+%\subsection{Iowa corn yield example}\label{example2}
+%Forecasting corn yield is an age-old and important problem in agriculture and economics. The United States produced roughly $14.2$ billion bushels of corn in the 2014-2015 crop marketing year, and the productions have been exported to more than 100 different countries. 
+%Iowa produces, by far, the most corn in the United States, supplying nearly 20 percent of the country's annual corn. Providing a valid corn yield prediction of Iowa before and within the harvesting season is of importance to agricultural policy decision, land planning, livestock husbandry, and option markets. 
+%
+%In this section, we compare the performance of RERFs, RFs, and Lasso in forecasting current year's corn yield in Iowa by using previous years' data and current year's meteorological and soil data. For instance, we used the complete data during 1988-2013 and the meteorological and soil data during January - September 2014 to forecast the corn yield in 2014.
+
+%\subsection{Description of Dataset}
+%The dataset used in the analysis consists of three parts: corn yield data, meteorological data and soil data. The corn yield dataset is available on the National Agricultural Statistical Service (NASS) website. It contains annual averaged corn yields for grain per acre for 99 counties in Iowa from 1926 to 2015. The data are collected by annual survey after harvesting seasons. The meteorological dataset is available on \textit{Climate Data Online}  system of National Center for Environmental Information. It is station-based containing daily records of meteorological variables over most of meteorological monitoring stations in each county in Iowa from 1988 to 2015. The meteorological variables include temperature over surface, Drought Index, precipitation, air pressure, etc. We should note that the meteorological recordings are time series data. We regard the mean of the meteorological variable in each month as an individual predictor. For instance, we use the mean temperature for each month from May to September, so there are five monthly mean temperature predictors in the feature matrix. The soil dataset contains one predictor variable named \textit{Corn Suitability Rate}, a continuous variable measuring the corn productivity levels of soils, downloaded from the Iowa Soil Properties and Interpretations Database. There are $2689$ observations and $49$ predictor variables in the dataset. Observations with missing values were omitted in the analysis. 
+%
+%Agricultural knowledge implies that extremely high and extremely low temperature may both cause low corn yield. Flooding (high precipitation) and drought (low precipitation) may cause low yield as well. As a consequence, we choose to include the quadratic terms of monthly mean temperature and Drought Index in the feature matrix $\bm{X}^{*}$ in Step 1 of RERFs. For all other predictors, only the first-order terms are included in $\bm{X}^{*}$. 
+%
+%The RMSE values for Lasso, RFs and RERFs are shown in Figure \ref{Iowa_rmse}. In the Iowa corn yield example, the prediction performance of RFs can be improved by using RERFs. The conclusion we make from Iowa corn yield example is consistent with the conclusion from simulation study and concrete strength prediction example. 
+%
+%\begin{figure}[ht]
+%	\centering
+%	\includegraphics[scale=0.7]{Iowa_example_new}
+%	\caption{The RMSE values for Lasso, RFs, and RERFs for each year from 2009 to 2015 in Iowa corn yield example.}\label{Iowa_rmse}
+%\end{figure}
+%%
+%\section{Discussion}\label{discussion}
+%In this paper we have introduced the regression-enhanced random forest approach, a novel generalized RF method that has a better prediction performance than RFs in important situations often encountered in practice. The key idea of RERFs is borrowing the strength of penalized parametric regression to improve on nonparametric machine learning approaches. Specifically, for RERFs, we run Lasso before RF, then construct a RF on the residuals from Lasso. Because RERFs will be reduced to RFs for sufficiently large penalty parameter, RFs can be viewed as a special case of RERFs. 
+%
+%Tuning parameter selection is critical to the performance of RERFs. The approach for selecting three tuning parameters have been discussed in detail in Section \ref{Method}. Because the exhaustive search on 3-dimensional tuning parameter space is time consuming, parallel computing can be applied to lessen the computing intensity. The other approach is an approximation procedure described as follows. First, fixing the nodesize and mtry to be the default values, we select a value of penalty parameter by cross validation. Second, using the selected value of penalty parameter $\lambda$, choose values of nodesize and mtry. Lastly, using the selected values of the nodesize and mtry obtained in the previous step, we update the value of the penalty parameter by cross validation. The above procedure reduces the computing intensity and yields values of the tuning parameter with cross-validation performance similar to parameters obtained by an exhaustive search. 
+%
+%We focus on the comparison between RFs and RERFs in prediction performance for regression problems. As a fully nonparametric predictive algorithm, random forests may lack in incorporating known relationships between the response and the predictors. Moreover, random forests may fail in extrapolation problems where predictions are required at points out of the domain of the training dataset. However, RERFs can capitalize on the strength of both parametric and nonparametric methods and overcome the corresponding disadvantages. 
+%
+%Numeric investigations, including one simulation study and two real data examples, all reach the same conclusion that the prediction performance of RERFs is better than that of RFs in both interpolation and extrapolation problems. Furthermore, in extrapolation cases, RERFs far outperform RFs. Strategies analogous to those described here can be used to improve other machine learning methods via combination with penalized parametric regression techniques.
+%
+%% In practice, however, it may be difficult to screen a problem into an interpolation problem or an extrapolation problem by exploratory analysis.  For instance, in a complex dataset, some predictors may be extrapolated, but the rest are not; some extrapolated predictors may be independent from the response variable or have very weak relationships with the response variable. Moreover, many real problems are actually mixtures of the interpolation and the extrapolation, in which people may still tend to use random forests approach. Hence, it is meaningful to improve the prediction performance of random forests in extrapolation problems or the problems that comprise of both the interpolation and the extrapolation. 
+%
+%%\subsection{Forecast corn yield by RERFs}
+%%\begin{table}[ht]
+%%	\centering
+%%	\caption{RMSE for forecasting Iowa corn yield} 
+%%	\begin{tabular}{ccccc}
+%%		\hline
+%%		Training & Testing &Lasso& RF & RERFs\\ 
+%%		\hline
+%%		1986-2014&2015 &  32.18 & 14.44 & 13.09 \\ 
+%%		1986-2013&2014 &  28.57 & 14.88 & 14.43 \\ 
+%%		1986-2012&2013  & 24.33 & 16.28 & 13.90 \\ 
+%%		1986-2011&2012 & 28.10 & 27.14 & 23.15 \\ 
+%%		1986-2010&2011 & 23.97 & 13.57 & 12.38 \\ 
+%%		1986-2009&2010 & 38.64 & 18.18 & 16.88 \\ 
+%%		1986-2008&2009 & 35.09 & 12.91 & 17.51 \\ 
+%%		1986-2007&2008 & 34.76 & 21.09 & 17.65 \\ 
+%%		\hline
+%%	\end{tabular}
+%%\end{table}
+%
+%%\section{Discussion}
+%%\begin{enumerate}
+%%	\item Categorical response variable
+%%	\item Tuning parameter selection
+%%\end{enumerate}
+%%
+%%\acks{}
+%
+%% Manual newpage inserted to improve layout of sample file - not
+%% needed in general before appendices/bibliography.
+%
+%%\newpage
+%
+%
+%
+%\vskip 0.2in
+%%\nocite{xu2016case,xu2014predictor,li2003local,friedman1991multivariate,breiman2001random}
+%\bibliographystyle{Chicago}
+%\bibliography{RERFs}
+%%\bibliography{sample}
+%%\newpage
+%%\appendix
+%%\section*{Appendix}
+%%
+%%\begin{figure}[H]
+%%	\centering
+%%	\includegraphics[scale=0.75]{simulation_lambda}
+%%	\caption{The boxplot of the selected penalty parameters in Lasso and RERFs against data-generating models from simulation study}\label{simulation_lambda}
+%%\end{figure}
+%%
+%%\begin{sidewaystable}
+%%	\centering
+%%	\caption{Description of selected tuning parameters by cross validation in simulation study}\label{simulation_tuning}
+%%	\begin{tabular}{ccccccc}
+%%		\hline\hline
+%%		Model No.& lambda(Lasso) & mtry(RFs) & nodesize(RFs)& mtry(RERFs) & nodesize(RERFs)&lambda(RERFs)\\ 
+%%		\hline
+%%		S1-1 &$0.0096$&$6$&$5$&$1$&$5$&$0.0188$\\
+%%		S1-2 & $0.0195$&$6$&$1$&$6$&$5$&$0.0188$\\
+%%		S1-3 & $0.0205$&$6$&$1$&$6$&$1$&$0.0458$\\
+%%		S2-1&$0.0095$&$6$&$5$&$1$&$5$&$0.0171$\\
+%%		S2-2 & $0.0216$&$6$&$5$&$6$&$5$&$0.0270$\\
+%%		
+%%		S2-3&$0.01892$&$6$&$1$&$6$&$5$&$0.0376$\\
+%%		\hline\hline
+%%	\end{tabular}
+%%\end{sidewaystable}
+%%
+%%
+%%\begin{sidewaystable}
+%%	\centering
+%%	\caption{The selected optimal tuning parameters of Lasso and RERFs for different training and testing datasets of corn yield forecasting problem} \label{Iowa_penalty}
+%%	\begin{tabular}{p{2.5cm}p{2.5cm}p{2cm}p{2cm}p{2cm}p{2cm}p{2cm}p{2cm}}
+%%		\hline\hline
+%%		Training dataset & Testing dataset & Optimal penalty parameter of Lasso& Optimal nodesize of RFs& Optimal mtry of RFs&Optimal penalty parameter of RERFs&Optimal nodesize of RERFs& Optimal mtry of RERFs\\ 
+%%		\hline
+%%		Year $< 2015$& Year $= 2015$ &  $0.030$& & &$4.000$& & \\ 
+%%		Year $< 2014$& Year $= 2014$ &  $0.047$& & &$2.000$& & \\
+%%		Year $< 2013$& Year $= 2013$ &  $0.015$& & &$0.204$& & \\ 
+%%		Year $< 2012$& Year $= 2012$ &  $0.028$& & &$0.082$& & \\ 
+%%		Year $< 2011$& Year $= 2011$ & $0.044$ & & &$0.000$& & \\
+%%		Year $< 2010$& Year $= 2010$ &  $0.025$& & &$0.000$& & \\ 
+%%		Year $< 2009$& Year $= 2009$ & $0.029$ & & &$0.000$& & \\ 
+%%		\hline\hline
+%%	\end{tabular}
+%%\end{sidewaystable}
+%%
+%%
+%%
+%%
+%%
+%
+
+
+
+
+
+
+
+
+
+\end{document}

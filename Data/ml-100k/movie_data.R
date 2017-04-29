@@ -5,7 +5,7 @@ setwd("~/Documents/Soft-Impute-MovieLens/Data/ml-100k/")
 data <- read.table("u.data", header =FALSE)
 head(data)
 data <- data[,1:3]
-set.seed(2017580)
+set.seed(580)
 train_index <- sample(1:100000,70000)
 validation_index <- sample(setdiff(1:100000,train_index), 15000)
 test_index <- setdiff(1:100000, c(train_index, validation_index))

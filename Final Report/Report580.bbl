@@ -1,0 +1,49 @@
+\begin{thebibliography}{1}
+
+\bibitem{beck2009fast}
+Amir Beck and Marc Teboulle.
+\newblock A fast iterative shrinkage-thresholding algorithm for linear inverse
+  problems.
+\newblock {\em SIAM journal on imaging sciences}, 2(1):183--202, 2009.
+
+\bibitem{bruck1975iterative}
+Ronald~E Bruck~Jr.
+\newblock An iterative solution of a variational inequality for certain
+  monotone operators in hilbert space.
+\newblock {\em Bulletin of the American Mathematical Society}, 81(5):890--892,
+  1975.
+
+\bibitem{halko2011finding}
+Nathan Halko, Per-Gunnar Martinsson, and Joel~A Tropp.
+\newblock Finding structure with randomness: Probabilistic algorithms for
+  constructing approximate matrix decompositions.
+\newblock {\em SIAM review}, 53(2):217--288, 2011.
+
+\bibitem{hastie2015statistical}
+Trevor Hastie, Robert Tibshirani, and Martin Wainwright.
+\newblock {\em Statistical learning with sparsity}.
+\newblock CRC press, 2015.
+
+\bibitem{mazumder2010spectral}
+Rahul Mazumder, Trevor Hastie, and Robert Tibshirani.
+\newblock Spectral regularization algorithms for learning large incomplete
+  matrices.
+\newblock {\em Journal of machine learning research}, 11(Aug):2287--2322, 2010.
+
+\bibitem{nesterov2007gradient}
+Yurii Nesterov et~al.
+\newblock Gradient methods for minimizing composite objective function, 2007.
+
+\bibitem{oh2015fast}
+Tae-Hyun Oh, Yasuyuki Matsushita, Yu-Wing Tai, and In~So~Kweon.
+\newblock Fast randomized singular value thresholding for nuclear norm
+  minimization.
+\newblock In {\em Proceedings of the IEEE Conference on Computer Vision and
+  Pattern Recognition}, pages 4484--4493, 2015.
+
+\bibitem{wong2015matrix}
+Raymond~KW Wong and Thomas Lee.
+\newblock Matrix completion with noisy entries and outliers.
+\newblock {\em arXiv preprint arXiv:1503.00214}, 2015.
+
+\end{thebibliography}
