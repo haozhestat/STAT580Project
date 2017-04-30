@@ -75,7 +75,7 @@
 
 \section{Summary}
 The purpose of matrix completion is to solve the problems of the following type: given data in the
-form of an $m\times n$ matrix $Z = \{Z_{ij}\}$, find an approximating matrix $\widehat{Z}$ that imputes or fills in missing entries in $Z$. There are wide applications of matrix completion. One popular example is the movie-rating problem in the "Netflix" Competition , where the data is the basis for a recommender system.
+form of an $m\times n$ matrix $Z = \{Z_{ij}\}$, find an approximating matrix $\widehat{Z}$ that imputes or fills in missing entries in $Z$. There are wide applications of matrix completion. One popular example is the movie-rating problem in the "Netflix" Competition, where the data is the basis for a recommender system.
 
 The matrix completion problem is ill-specified
 unless we impose additional constraints on the unknown matrix $Z$, and one
@@ -83,16 +83,16 @@ common choice is a rank constraint.  Suppose that we observe all entries of the 
 \begin{equation}\label{rank matrix}
 \widehat{Z} = \underset{M}{\arg \min} ||Z-M||^{2}_{F} ~~\text{subject to rank}(M) \leq \delta,
 \end{equation}
-where $||\cdot||_{F}^{2}$ is Frobenius norm of a matrix. However, this rank-minimization problem is computationally intractable (NP-hard), and cannot be solved in general even for moderately large matrices. Alternatively, we consider the following small modification to (\ref{rank matrix}):
+where $||\cdot||_{F}^{2}$ is the Frobenius norm of a matrix. However, this rank-minimization problem is computationally intractable (NP-hard), and cannot be solved in general even for moderately large matrices. Alternatively, we consider the following small modification to (\ref{rank matrix}):
 \begin{equation}\label{svd}
 \widehat{Z} = \underset{M}{\arg \min} ||Z-M||^{2}_{F} ~~\text{subject to }||M||_{*} \leq \delta,
 \end{equation}
-where $||\cdot||_{*}^{2}$ is the nuclear norm, i.e., the sum of the sigular values. Under many situations the nuclear norm is an effective convex relaxation to the rank
+where $||\cdot||_{*}^{2}$ is the nuclear norm, i.e., the sum of the sigular values. Under many situations, the nuclear norm is an effective convex relaxation to the rank
 constraint, and hence problem (\ref{svd}) is convex. 
 
 Soft-Impute Algorithm was proposed and studied in \cite{mazumder2010spectral} to solve problem (\ref{svd}). It was shown in \cite{mazumder2010spectral}  that Soft-Impute Algorithm is guaranteed to converge at least sub-linearly, meaning that $O\left(\frac{1}{\epsilon}\right)$ iterations are sufficient to 
 compute a solution that is $\epsilon$-close to the global optimum.
-The procedure for Soft-Impute Algorithm is introduced briefly as follows. First consider the case
+The procedure for Soft-Impute Algorithm is introduced briefly as follows. First considering the case
 where there is no missing data, to solve (\ref{svd}), we simply
 compute the SVD of Z, soft-threshold the singular values by $\lambda$, and reconstruct
 the matrix. The singular value decomposition (SVD) provides an effective method here. Then, we start with an initial guess for the missing values, compute
@@ -103,31 +103,26 @@ estimates for the missing values. This process is repeated until convergence.
 %regularization. 
 
 \section{Various SVD Implementations and Comparison}
-\subsection{Brief introduction to SVD Implementations}
+\subsection{Brief Introduction to SVD Implementations}
 \begin{itemize}
 	\item \textbf{C code via LAPACK}:\\
-	The core part of the c code for implementing SVD is the LAPACK routine DGESVD and DGEMM. The first argument of the C main function is filename, and the second argument is $\lambda$ used in Soft-Impute Algorithm. The format of the input data is like the given Lena dataset. The first row is the dimension of the matrix with N is the row, and P is the column. N >= P.  The second row is the matrix arranged by column.
+	The core part of the c code for implementing SVD is the LAPACK routine DGESVD and DGEMM. The first argument of the C main function is filename, and the second argument is $\lambda$ used in Soft-Impute Algorithm. The format of the input data is like the given Lena dataset. The first row is the dimension of the matrix with N is the row, and P is the column. The second row is the matrix arranged by column.
 		\item \textbf{R internal svd function}: \\
-	The main functions used are the LAPACK routines DGESDD and ZGESDD. The performance of R internal svd function essentially depends on the performance of LAPACK.
+	The LAPACK routines DGESDD and ZGESDD are used. The performance of R internal svd function essentially depends on the performance of LAPACK.
 	\item \textbf{svd Package}: \\
-	There are three functions in the svd package that are related to the singular-value decomposition. Because “trlan.svd” and “ztrlan.svd” will not return the right singular vectors and we need that vector in soft-impute algorithm. So we are not going to use those two functions. We only use “propack.svd” to implement the soft-impute algorithm. 
-	PROPACK does SVD via the implicitly restarted Lanczos bidiagonalization with partial reorthogo- nalization.
+	There are three functions in the svd package that are related to the singular-value decomposition. Because ``trlan.svd" and ``ztrlan.svd" will not return the right singular vectors which we need in soft-impute algorithm. So we are not going to use the two functions. We only use ``propack.svd" to implement the soft-impute algorithm. PROPACK does SVD via the implicitly restarted Lanczos bidiagonalization with partial reorthogonalization.
 	\item \textbf{RcppArmadillo Package}: \\	
-	The “RcppArmadillo” package includes the header files from the “Armadillo” library, which is a templated C++ linear algebra library. Various matrix decompositions are provided through optional integration with LAPACK and ATLAS libraries1.  We use svd in “Armadillo” to implement the soft-impute algorithm.
+	The ``RcppArmadillo" package includes the header files from the ``Armadillo" library, which is a templated C++ linear algebra library. Various matrix decompositions are provided through optional integration with LAPACK and ATLAS libraries.  We use svd in ``Armadillo" to implement Soft-Impute Algorithm.
 	\item \textbf{irlba package}: \\
-	We use “irlba” function in the irlba package. The augmented implicitly restarted Lanczos bidiagonalization algorithm (IRLBA) finds a few approximate largest singular values and corresponding singular vectors of a sparse or dense matrix using a method of Baglama and Reichel. It is a fast and memory-efficient way to compute a partial SVD.
-	The maximum number of singular values that can be calculated in this function is 
-	where  is the dimension of the matrix.
-	To find the suitable number of singular values in each iteration of the soft-impute algorithm, we compare the number of thresholded singular values with the maximum allowed number of singular values then take the minimum of these two values as the suitable number in each iteration.
+	We use ``irlba" function in the ``irlba" package. The augmented implicitly restarted Lanczos bidiagonalization algorithm (IRLBA) finds a few approximate largest singular values and corresponding singular vectors of a sparse or dense matrix using a method of Baglama and Reichel. It is a fast and memory-efficient way to compute a partial SVD.
+	To find the suitable number of singular values in each iteration of Soft-Impute Algorithm, we compare the number of thresholded singular values with the maximum allowed number of singular values then take the minimum of these two values as the suitable number in each iteration.
 \end{itemize}
 
 	\subsection{Simulation Study}
 	
-	There are many aspects that can reflect performance of a method such as training error, speed and memory usage. In our comparison, these four methods are just different implementations of the same algorithm so they should have the same training error. And in our simulation experiments, they do have the same training error so we are not going to compare the training error. We are going to compare the speed of each method in our experiments.
+	There are many aspects that can reflect the performance of one method, such as cross-validation error, speed and memory usage. In our comparison, these four methods are just different implementations of the same algorithm, so they should have the same cross-validation error. And in our simulation experiments, they do have the same errors, so we are not going to compare the CV errors. We are going to compare the speed of each method in our experiments.
 	
-	By learning the soft-impute algorithm, we think that three factors may influence the speed. They are dimension of the matrix, missing rate and true rank of the matrix. In our experiment, we let one variable vary and keep other two variables the same to say how each variable affect the performance.
-	
-	To compare the speed of each method, we use “microbenchmark” to calculate the time usage and take the median as the result.
+	There are three factors that may influence the speed. They are matrix dimension, missing rate and true matrix rank. In our experiment, we let one variable vary and keep other two variables fix. To compare the speed of each method, we use ``microbenchmark" to calculate the time consumption and take the median as the result.
 	
 	\subsubsection{Comparison under different matrix dimensions}
 	
@@ -147,11 +142,7 @@ estimates for the missing values. This process is repeated until convergence.
 	\end{tabular}
 \end{table}
 
-In general, the result shows that the computation speed of “R internal svd” and “RcppArmadillo” methods are similar and are the fastest method. When the matrix size is relatively large (1000,1000), the “R internal svd” performs a little better than “RcppArmadillo”. Otherwise, “RcppArmadillo” is a little better.
-
-The “propack.svd” method is slower than the two methods mentioned above.  While the relative difference with those two becomes less and less as the dimension becomes larger and larger. 
-
-As for the “irlba” method, when the dimension is relatively small ($\leq 100$), this method performs similarly compared with “R internal svd” and “RcppArmadillo” methods. But when the matrix dimension is relatively large, the time usage of this method will go up dramatically as we can see in Table \ref{dimension}.
+In general, the result shows that the computation speed of “R internal svd” and “RcppArmadillo” methods are similar, and they are the fastest methods. When the matrix size is relatively large (e.g., $1000\times1000$), the “R internal svd” performs a little better than “RcppArmadillo”. Otherwise, “RcppArmadillo” is a little better. The “propack.svd” method is slower than the two methods mentioned above.  While the difference  becomes less and less as the dimension becomes larger and larger. As for the “irlba” method, when the dimension is relatively small ($\leq 100$), this method performs similarly compared with “R internal svd” and “RcppArmadillo” methods. But when the matrix dimension is relatively large, the time consumption of this method will go up dramatically as we can see in Table \ref{dimension}.
 
 	\subsubsection{Comparison under different missing rates}
 	
@@ -171,13 +162,7 @@ As for the “irlba” method, when the dimension is relatively small ($\leq 100
 		\end{tabular}
 	\end{table}
 	
-As a whole, the “R internal svd” and “RcppArmadillo” perform similarly while “RcppArmadillo” is a little bit faster than “R internal svd”.
-
-The “propack.svd” method is the most unstable method in this situation. When the missing rate is too large or too small, this method fails to execute. Even though the missing rate is suitable, this method is also the slowest one among all the methods.
-
-“irlba” method performs better as the missing rate goes up. For other three methods, they use more time as the missing rate goes up. While the “irlba” method is different.
-
-When the missing rate is large ($\geq 0.6$) and the dimension is medium (e.g., $100\times100$), the “irlba” method is the fastest method.
+As a whole, the “R internal svd” and “RcppArmadillo” perform similarly while “RcppArmadillo” is a little bit faster than “R internal svd”. The “propack.svd” method is the most unstable method in this situation. When the missing rate is too large or too small, this method fails to execute. Even though the missing rate is suitable, this method is also the slowest one among all the methods. The “irlba” method performs better as the missing rate goes up. For other three methods, they use more time as the missing rate goes up. While the “irlba” method is different. When the missing rate is large ($\geq 0.6$) and the dimension is medium (e.g., $100\times100$), the “irlba” method is the fastest method.
 
 	\subsubsection{Comparison under different matrix ranks}
 	
@@ -202,9 +187,10 @@ All of the methods use more time as the true rank goes up. “RcppArmadillo” m
 
 \subsection{Lena Image Data}
 
-After comparing different methods, we decide to use “R internal svd” to solve this problem.  To design a grid of , we first use svd to decompose the training matrix and get the singular values of it . Then we use the quantile of the singular values of the training matrix to design the grid of  . There are two reason why we do in this way. The first is that we have no idea about the range of  so we need some reference to specify. The second reason is that by using quantile we can reduce the number of search times. We first use  (The subscript represents the quantile) as the  vector. And calculate the RMSE in the validation set and we get the Figure \ref{lena1}.
+After comparing different methods, we decide to use “R internal svd” to solve this problem.  To design a grid of $\lambda$, we first use svd to decompose the training matrix and get the singular values of it . Then we use the quantile of the singular values of the training matrix to design the grid of $\lambda$. There are two reason why we do in this way. The first is that we have no idea about the range of  so we need some reference to specify. The second reason is that by using quantile we can reduce the number of search times. We first use  (The subscript represents the quantile) as the  vector. And calculate the RMSE in the validation set and we get the Figure \ref{lena1}. We find that the minimal of the RMSE corresponding to $150$. Then we do further search. After calculating the RMSE in the validation set we get the Figure \ref{lena2}. This time we find the minimal of the RMSE corresponding to $180$ . We continue our search to find the best. The RMSE can be seen in the Figure \ref{lena3}. In Figure \ref{lena3}, we can see that the minimal of RMSE corresponding to  $168$,  which is the best. In this way, we can reduce the total number of iterations and therefore save a lot of time.
 
-\begin{figure}
+
+\begin{figure}[H]
 	\centering
 	\begin{minipage}[c]{0.32\textwidth}
 		\centering
@@ -223,26 +209,45 @@ After comparing different methods, we decide to use “R internal svd” to solv
 	\end{minipage}
 \end{figure}
 
-We find that the minimal of the RMSE corresponding to . Then we do further search. We use  as the second  vector. After calculating the RMSE in the validation set we get the Figure \ref{lena2}. This time we find the minimal of the RMSE corresponding to . We continue our search to find the best . We use  as the third  vector. The RMSE can be seen in the Figure \ref{lena3}. In Figure \ref{lena3}, we can see that the minimal of RMSE corresponding to   which is the best  we choose.
-As we can see, by using quantile, we only need  s to select the turning parameter. In this way, we can reduce the total number of s to be considered and therefore save a lot of time.
-Figure \ref{lena4} is the image with 40\% pixels randomly missing. And Figure \ref{lena5} is the image after using the soft-impute to fix.The total rank in the reconstructed image is 83.
 
-\begin{figure}
+Figure \ref{lena4} is the image with 40\% pixels randomly missing. And Figure \ref{lena5} is the image after using the soft-impute to fix. The total rank in the reconstructed image is 83.
+
+\begin{figure}[H]
 	\centering
 	\begin{minipage}[c]{0.49\textwidth}
 		\centering
-		\includegraphics[angle=0,width=9cm,height=9cm]{lena4}
+		\includegraphics[angle=0,width=9cm,height=10cm]{lena4}
 		\caption{Imputed Lena Image}\label{lena4}
 	\end{minipage}
 	\begin{minipage}[c]{0.49\textwidth}
 		\centering
-		\includegraphics[angle=0,width=9cm,height=9cm]{lena5}
+		\includegraphics[angle=0,width=9cm,height=10cm]{lena5}
 		\caption{Original Lena Image}\label{lena5}
 	\end{minipage}
 \end{figure}
 
 \subsection{MovieLens Dataset}
+We randomly split MovieLens 100K Dataset into three parts: training set (70\%), validation
+set (15\%) and test set (15\%). The validation set was used to perform hold-out validation for the selection of $\lambda$. Here, we applied Soft-Impute Algorithm to MovieLens 100K Dataset using the implemention of R internal svd function and the implementation of propack.svd in ``svd" package. We compared their speed and performance. 
 
+The selection of optimal values of $\lambda$ is critical to the performance of Soft-Impute Algorithm. Because exhausted searching is extremely time consuming, we used a multi-step approach. First, we did singular value decomposition of the original matrix (missing entries imputed by zeros) and obtain a vector of singular values. We can select from a sequence of quantiles of these singular values (e.g., 5\%, 6\%, 7\%, \ldots, 98\%, 99\%). The selected value of $\lambda$ is denoted by $\lambda^{*}$. Then, we select another value of $\lambda$ from $[\lambda^{*}-\delta, \lambda^{*}+\delta]$, a local region of $\lambda^{*}$. We continue repeating the procedure until the selected value attains a pre-specified resolution. Figure \ref{lambda} illustrates the selection procedure introduced above using the implementation of R internal svd function. For instance, in the first step, $\lambda = 34.92$ has the smallest RMSE for validation set. Then, we selected $\times\times$ from $[29.92, 39.92]$. After four steps, our final value of optimal $\lambda$ is $37.09728$.
+
+\begin{figure}[ht]
+	\includegraphics[width=16cm,height=12cm]{movie}
+	\caption{Selection of $\lambda$}\label{lambda}
+\end{figure}
+
+The speed performance of svd implementations depends on the value of $\lambda$. We compared the speed performance of R internal svd function and propack.svd in ``svd" package under different values of $\lambda$. After investigating Figure \ref{speed}, we can conclude that the implementation with R internal svd function is faster than the implementation with rpack.svd function.
+
+For MovieLens 100K Dataset, after hold-out validation, the optimal value of $\lambda$ is $37.09728$. The RMSE for testing set is $1.570029$, while the RMSE for validation set is $1.890216$.
+
+
+\begin{figure}[H]
+	\includegraphics[width=18cm,height=12cm]{speed}
+	\caption{The time consumption for two implementations under different values of $\lambda$}\label{speed}
+\end{figure}
+
+\vspace{0.2in}
 \section{Accelerating \textbf{Soft-Impute}}
 Let us consider a general setting of convex composite minimization problem
 \begin{equation*}
@@ -283,7 +288,7 @@ $UDV'$ is the SVD of $W$, $D = diag(d_{1}, \ldots, d_{r})$, and $t_{+} = \max(t,
 
 As we have shown, Soft-Impute Algorithm has a convergence rate of $O\left(\frac{1}{k}\right)$, which for large $k$ is worse than the Accelerated Soft-Impute Algorithm with rate $O\left(\frac{1}{k^{2}}\right)$. However, the numeric results in \cite{mazumder2010spectral} show that Soft-Impute Algorithm performs favorably compared with the accelerated version illustrated in Figure 5 of \cite{mazumder2010spectral}.
 
-
+\newpage
 \vskip 0.2in
 \bibliographystyle{Chicago}
 \nocite{halko2011finding, hastie2015statistical, bruck1975iterative, mazumder2010spectral, oh2015fast, wong2015matrix, nesterov2007gradient, beck2009fast}
@@ -298,8 +303,11 @@ As we have shown, Soft-Impute Algorithm has a convergence rate of $O\left(\frac{
 \subsection*{svd package}
 \lstinputlisting[language=R]{../Codes/haozhe/softimpute_rpacksvd.R}
 \subsection*{RcppArmadillo Package}
+\lstinputlisting[language=R]{../Codes/haozhe/softimpute_rcpp.R}
 \subsection*{irlba package}
-
+\lstinputlisting[language=R]{../Codes/haozhe/softimpute_irlba.R}
+\subsection*{Lena Data}
+\lstinputlisting[language=R]{../Codes/Dapeng/lena.R}
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
