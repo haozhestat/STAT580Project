@@ -230,7 +230,7 @@ Figure \ref{lena4} is the image with 40\% pixels randomly missing. And Figure \r
 We randomly split MovieLens 100K Dataset into three parts: training set (70\%), validation
 set (15\%) and test set (15\%). The validation set was used to perform hold-out validation for the selection of $\lambda$. Here, we applied Soft-Impute Algorithm to MovieLens 100K Dataset using the implemention of R internal svd function and the implementation of propack.svd in ``svd" package. We compared their speed and performance. 
 
-The selection of optimal values of $\lambda$ is critical to the performance of Soft-Impute Algorithm. Because exhausted searching is extremely time consuming, we used a multi-step approach. First, we did singular value decomposition of the original matrix (missing entries imputed by zeros) and obtain a vector of singular values. We can select from a sequence of quantiles of these singular values (e.g., 5\%, 6\%, 7\%, \ldots, 98\%, 99\%). The selected value of $\lambda$ is denoted by $\lambda^{*}$. Then, we select another value of $\lambda$ from $[\lambda^{*}-\delta, \lambda^{*}+\delta]$, a local region of $\lambda^{*}$. We continue repeating the procedure until the selected value attains a pre-specified resolution. Figure \ref{lambda} illustrates the selection procedure introduced above using the implementation of R internal svd function. For instance, in the first step, $\lambda = 34.92$ has the smallest RMSE for validation set. Then, we selected $\times\times$ from $[29.92, 39.92]$. After four steps, our final value of optimal $\lambda$ is $37.09728$.
+The selection of optimal values of $\lambda$ is critical to the performance of Soft-Impute Algorithm. Because exhausted searching is extremely time consuming, we used a multi-step approach. First, we did singular value decomposition of the original matrix (missing entries imputed by zeros) and obtain a vector of singular values. We can select from a sequence of quantiles of these singular values (e.g., 5\%, 6\%, 7\%, \ldots, 98\%, 99\%). The selected value of $\lambda$ is denoted by $\lambda^{*}$. Then, we select another value of $\lambda$ from $[\lambda^{*}-\delta, \lambda^{*}+\delta]$, a local region of $\lambda^{*}$. We continue repeating the procedure until the selected value attains a pre-specified resolution. Figure \ref{lambda} illustrates the selection procedure introduced above using the implementation of R internal svd function. For instance, in the first step, $\lambda = 11.70$ has the smallest RMSE for validation set. Then, we selected $12.33$ from $[6.70, 16.70]$. After four steps, our final value of optimal $\lambda$ is $12.27333$.
 
 \begin{figure}[ht]
 	\includegraphics[width=16cm,height=12cm]{movie}
@@ -239,7 +239,7 @@ The selection of optimal values of $\lambda$ is critical to the performance of S
 
 The speed performance of svd implementations depends on the value of $\lambda$. We compared the speed performance of R internal svd function and propack.svd in ``svd" package under different values of $\lambda$. After investigating Figure \ref{speed}, we can conclude that the implementation with R internal svd function is faster than the implementation with rpack.svd function.
 
-For MovieLens 100K Dataset, after hold-out validation, the optimal value of $\lambda$ is $37.09728$. The RMSE for testing set is $1.570029$, while the RMSE for validation set is $1.890216$.
+{\bf For MovieLens 100K Dataset, after hold-out validation, the optimal value of $\bm{\lambda}$ is $\mathbf{12.27333}$. The RMSE for testing set is $\mathbf{1.067938}$, while the RMSE for validation set is $\mathbf{1.00216}$.}
 
 
 \begin{figure}[H]
@@ -308,6 +308,7 @@ As we have shown, Soft-Impute Algorithm has a convergence rate of $O\left(\frac{
 \lstinputlisting[language=R]{../Codes/haozhe/softimpute_irlba.R}
 \subsection*{Lena Data}
 \lstinputlisting[language=R]{../Codes/Dapeng/lena.R}
+
 %
 %%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%%
 %%
