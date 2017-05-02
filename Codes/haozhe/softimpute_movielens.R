@@ -93,3 +93,27 @@ result2 <- rbind(result,result1)
 ggplot(result2[result2$Time<100,]) + 
   geom_line(aes(x=lambda,y=Time, colour=method), linetype= 2)+
   geom_point(aes(x=lambda,y=Time, colour=method), size=0.8)
+
+
+
+##########
+library(ggplot2)
+
+
+result <- read.csv("sim_result_internalsvd.csv", header = TRUE)
+result$method <- "internalsvd"
+result1 <- read.csv("sim_result_rpacksvd.csv", header = TRUE)
+result1$method <- "rpacksvd"
+result2 <- rbind(result,result1)
+colnames(result2) <- c("lambda", "RMSE_validation", "Time", "method")
+result$Step <- as.factor(c(rep("Step 1", 16), rep("Step 2", 16), rep("Step 3", 16), rep("Step 4", 16)))
+colnames(result) <- c("lambda", "RMSE_validation", "Time", "method", "Step")
+
+ggplot(result2) + 
+  geom_line(aes(x=lambda,y=Time, colour=method), linetype= 2)+
+  geom_point(aes(x=lambda,y=Time, colour=method), size=0.8)
+
+ggplot(result) + geom_line(aes(x=lambda,y=RMSE_validation), linetype= 2)+
+  geom_point(aes(x=lambda,y=RMSE_validation))+
+  facet_wrap(~Step, scales = "free")
+
